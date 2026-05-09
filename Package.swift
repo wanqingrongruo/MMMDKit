@@ -60,7 +60,7 @@ let package = Package(
         ),
         .testTarget(
             name: "MMMDCoreTests",
-            dependencies: ["MMMDCore", "MMMDParserCmark"]
+            dependencies: ["MMMDCore", "MMMDParserCmark", "MMMDHighlighter", "MMMDHTML"]
         ),
         .testTarget(
             name: "MMMDStreamingTests",

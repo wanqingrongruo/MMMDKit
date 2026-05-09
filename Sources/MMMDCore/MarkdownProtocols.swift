@@ -30,10 +30,25 @@ public protocol MarkdownPlugin: Sendable {
 public struct RenderContext: Sendable {
     public var theme: MarkdownTheme
     public var environment: RenderEnvironment
+    public var actions: MarkdownActions
+    public var codeHighlighter: (any CodeHighlighter)?
+    public var mathRenderer: (any MathRenderer)?
+    public var imageLoader: (any ImageLoader)?
 
-    public init(theme: MarkdownTheme = .default, environment: RenderEnvironment = .init()) {
+    public init(
+        theme: MarkdownTheme = .default,
+        environment: RenderEnvironment = .init(),
+        actions: MarkdownActions = .init(),
+        codeHighlighter: (any CodeHighlighter)? = nil,
+        mathRenderer: (any MathRenderer)? = nil,
+        imageLoader: (any ImageLoader)? = nil
+    ) {
         self.theme = theme
         self.environment = environment
+        self.actions = actions
+        self.codeHighlighter = codeHighlighter
+        self.mathRenderer = mathRenderer
+        self.imageLoader = imageLoader
     }
 }
 
@@ -56,16 +71,20 @@ public struct RenderEnvironment: Equatable, Sendable {
     }
 }
 
-public protocol CodeHighlighter {
+public protocol CodeHighlighter: Sendable {
     func highlight(code: String, language: String?, theme: CodeTheme) async throws -> HighlightResult
 }
 
-public protocol MathRenderer {
+public protocol MathRenderer: Sendable {
     func render(latex: String, displayMode: Bool, environment: MathEnvironment) async throws -> MathRenderResult
 }
 
 public protocol HTMLRenderer {
     func capability(for html: HTMLBlock) -> HTMLRenderCapability
+}
+
+public protocol ImageLoader: Sendable {
+    func loadImageData(from url: URL) async throws -> Data
 }
 
 public struct MarkdownActions: Sendable {
@@ -89,17 +108,26 @@ public struct MarkdownConfiguration: Sendable {
     public var plugins: [MarkdownPlugin]
     public var actions: MarkdownActions
     public var blockRendererRegistry: BlockRendererRegistry
+    public var codeHighlighter: (any CodeHighlighter)?
+    public var mathRenderer: (any MathRenderer)?
+    public var imageLoader: (any ImageLoader)?
 
     public init(
         theme: MarkdownTheme = .default,
         plugins: [MarkdownPlugin] = [],
         actions: MarkdownActions = .init(),
-        blockRendererRegistry: BlockRendererRegistry = .init()
+        blockRendererRegistry: BlockRendererRegistry = .init(),
+        codeHighlighter: (any CodeHighlighter)? = nil,
+        mathRenderer: (any MathRenderer)? = nil,
+        imageLoader: (any ImageLoader)? = nil
     ) {
         self.theme = theme
         self.plugins = plugins
         self.actions = actions
         self.blockRendererRegistry = blockRendererRegistry
+        self.codeHighlighter = codeHighlighter
+        self.mathRenderer = mathRenderer
+        self.imageLoader = imageLoader
     }
 }
 

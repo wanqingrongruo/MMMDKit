@@ -1,0 +1,29 @@
+name: MMMDKitMacDemo
+options:
+  bundleIdPrefix: com.mmmdkit.demo
+  deploymentTarget:
+    macOS: "12.0"
+settings:
+  base:
+    SWIFT_VERSION: "5.7"
+    DEVELOPMENT_TEAM: ""
+targets:
+  MMMDKitMacDemo:
+    type: application
+    platform: macOS
+    deploymentTarget: "12.0"
+    sources:
+      - path: MMMDKitMacDemoApp.swift
+      - path: ../Shared/DemoMarkdownSamples.swift
+        name: DemoMarkdownSamples.swift
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.mmmdkit.demo.mac
+        INFOPLIST_FILE: Info.plist
+schemes:
+  MMMDKitMacDemo:
+    build:
+      targets:
+        MMMDKitMacDemo: all
+    run:
+      config: Debug

@@ -14,54 +14,11 @@ Pod::Spec.new do |s|
   s.swift_version = "5.7"
   s.ios.deployment_target = "15.0"
   s.osx.deployment_target = "12.0"
-  s.default_subspecs = "Core", "ParserCmark", "Streaming", "Highlighter", "Math", "HTML"
-
-  s.subspec "Core" do |ss|
-    ss.source_files = "Sources/MMMDCore/**/*.swift"
-  end
-
-  s.subspec "ParserCmark" do |ss|
-    ss.dependency "MMMDKit/Core"
-    ss.source_files = "Sources/MMMDParserCmark/**/*.swift"
-  end
-
-  s.subspec "Streaming" do |ss|
-    ss.dependency "MMMDKit/Core"
-    ss.source_files = "Sources/MMMDStreaming/**/*.swift"
-  end
-
-  s.subspec "Highlighter" do |ss|
-    ss.dependency "MMMDKit/Core"
-    ss.source_files = "Sources/MMMDHighlighter/**/*.swift"
-  end
-
-  s.subspec "Math" do |ss|
-    ss.dependency "MMMDKit/Core"
-    ss.source_files = "Sources/MMMDMath/**/*.swift"
-  end
-
-  s.subspec "HTML" do |ss|
-    ss.dependency "MMMDKit/Core"
-    ss.source_files = "Sources/MMMDHTML/**/*.swift"
-  end
-
-  s.subspec "UIKit" do |ss|
-    ss.ios.deployment_target = "15.0"
-    ss.dependency "MMMDKit/Core"
-    ss.dependency "MMMDKit/Streaming"
-    ss.dependency "MMMDKit/Highlighter"
-    ss.dependency "MMMDKit/Math"
-    ss.dependency "MMMDKit/HTML"
-    ss.source_files = "Sources/MMMDUIKit/**/*.swift"
-  end
-
-  s.subspec "AppKit" do |ss|
-    ss.osx.deployment_target = "12.0"
-    ss.dependency "MMMDKit/Core"
-    ss.dependency "MMMDKit/Streaming"
-    ss.dependency "MMMDKit/Highlighter"
-    ss.dependency "MMMDKit/Math"
-    ss.dependency "MMMDKit/HTML"
-    ss.source_files = "Sources/MMMDAppKit/**/*.swift"
-  end
+  s.dependency "MMMDCore"
+  s.dependency "MMMDParserCmark"
+  s.dependency "MMMDStreaming"
+  s.dependency "MMMDHighlighter"
+  s.dependency "MMMDMath"
+  s.dependency "MMMDHTML"
+  s.source_files = "Sources/MMMDKit/**/*.swift"
 end

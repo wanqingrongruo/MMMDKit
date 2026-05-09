@@ -2,10 +2,14 @@ import Foundation
 import MMMDCore
 
 public struct DefaultHTMLRenderer: HTMLRenderer {
-    public init() {}
+    private let sanitizer: HTMLSanitizer
+
+    public init(sanitizer: HTMLSanitizer = .init()) {
+        self.sanitizer = sanitizer
+    }
 
     public func capability(for html: HTMLBlock) -> HTMLRenderCapability {
-        let value = html.html.lowercased()
+        let value = sanitizer.sanitize(html.html).lowercased()
 
         if value.contains("<script") {
             return .unsupported

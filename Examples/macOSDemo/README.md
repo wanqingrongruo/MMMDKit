@@ -1,12 +1,11 @@
 # macOS Demo
 
-这个目录包含一个最小 AppKit macOS demo 源码文件。
+这个目录包含一个 AppKit macOS demo 源码文件和 CocoaPods `Podfile`。
 
 运行方式：
 
-1. 在 Xcode 中创建新的 macOS AppKit App。
-2. 添加本地 `MMMDKit` package。
-3. 引入 `MMMDParserCmark` 和 `MMMDAppKit` products。
-4. 使用 `MMMDKitMacDemoApp.swift` 替换生成的 App 入口文件。
+1. 在当前目录执行 `pod install`。
+2. 使用生成的 `MMMDKitMacDemo.xcworkspace` 打开工程。
+3. 选择 `MMMDKitMacDemo` scheme 运行。
 
-demo 不放进 package manifest，让核心 package 聚焦在可复用库 target 和测试上。
+demo 通过 CocoaPods 引入本地模块 pod，覆盖 Parser、AppKit、Highlighter、Math、HTML 等能力。

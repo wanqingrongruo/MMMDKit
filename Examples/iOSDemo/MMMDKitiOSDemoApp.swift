@@ -1,5 +1,8 @@
 import UIKit
+import MMMDCore
+import MMMDHighlighter
 import MMMDParserCmark
+import MMMDStreaming
 import MMMDUIKit
 
 @main
@@ -23,40 +26,105 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         guard let windowScene = scene as? UIWindowScene else { return }
 
         let window = UIWindow(windowScene: windowScene)
-        window.rootViewController = DemoMarkdownViewController()
+        window.rootViewController = UINavigationController(rootViewController: DemoMarkdownViewController())
         window.makeKeyAndVisible()
         self.window = window
     }
 }
 
 final class DemoMarkdownViewController: UIViewController {
-    private let markdownView = MarkdownView()
+    private let markdownView = MarkdownCollectionViewHost()
+    private lazy var modeControl = UISegmentedControl(items: ["30+ 数据", "流式输出"])
+    private var configuration: MarkdownConfiguration!
+    private var streamingProcessor: StreamingMarkdownProcessor?
+    private var streamingTimer: Timer?
+    private var streamingChunks: [String] = []
+    private var streamingIndex = 0
 
     override func viewDidLoad() {
         super.viewDidLoad()
         title = "MMMDKit iOS Demo"
         view.backgroundColor = .systemBackground
 
+        modeControl.selectedSegmentIndex = 0
+        modeControl.addTarget(self, action: #selector(modeChanged), for: .valueChanged)
+        modeControl.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(modeControl)
+
         markdownView.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(markdownView)
         NSLayoutConstraint.activate([
             markdownView.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 16),
             markdownView.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -16),
-            markdownView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 16),
+            modeControl.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 16),
+            modeControl.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -16),
+            modeControl.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 12),
+            markdownView.topAnchor.constraint(equalTo: modeControl.bottomAnchor, constant: 16),
             markdownView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -16)
         ])
 
-        let parser = CmarkMarkdownParser()
-        let source = """
-        # MMMDKit iOS 示例
+        configuration = MarkdownConfiguration(
+            actions: .init(
+                onLinkTap: { url in
+                    UIApplication.shared.open(url)
+                },
+                onCopyCode: { _, _ in
+                    print("已复制代码块")
+                }
+            ),
+            codeHighlighter: KeywordCodeHighlighter()
+        )
+        showLongFeed()
+    }
 
-        这个示例使用 UIKit 原生入口渲染 Markdown。
+    deinit {
+        streamingTimer?.invalidate()
+    }
 
-        ```swift
-        let parser = CmarkMarkdownParser()
-        ```
-        """
-        let document = (try? parser.parse(source, options: .init())) ?? .init(blocks: [])
-        markdownView.render(document)
+    @objc private func modeChanged() {
+        if modeControl.selectedSegmentIndex == 0 {
+            showLongFeed()
+        } else {
+            startStreaming()
+        }
+    }
+
+    private func showLongFeed() {
+        streamingTimer?.invalidate()
+        streamingTimer = nil
+        streamingProcessor = nil
+        markdownView.render(DemoMarkdownSamples.makeLongFeedDocument(), configuration: configuration)
+    }
+
+    private func startStreaming() {
+        streamingTimer?.invalidate()
+        streamingChunks = DemoMarkdownSamples.streamingChunks()
+        streamingIndex = 0
+
+        let processor = StreamingMarkdownProcessor(parser: CmarkMarkdownParser())
+        processor.onDiff = { [weak self] diff in
+            DispatchQueue.main.async {
+                guard let self else { return }
+                self.markdownView.render(diff.document, configuration: self.configuration)
+            }
+        }
+        streamingProcessor = processor
+        processor.reset()
+
+        streamingTimer = Timer.scheduledTimer(withTimeInterval: 0.045, repeats: true) { [weak self] timer in
+            guard let self else {
+                timer.invalidate()
+                return
+            }
+
+            guard self.streamingIndex < self.streamingChunks.count else {
+                self.streamingProcessor?.finish()
+                timer.invalidate()
+                return
+            }
+
+            self.streamingProcessor?.append(self.streamingChunks[self.streamingIndex])
+            self.streamingIndex += 1
+        }
     }
 }

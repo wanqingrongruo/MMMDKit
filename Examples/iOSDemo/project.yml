@@ -1,0 +1,31 @@
+name: MMMDKitiOSDemo
+options:
+  bundleIdPrefix: com.mmmdkit.demo
+  deploymentTarget:
+    iOS: "15.0"
+settings:
+  base:
+    SWIFT_VERSION: "5.7"
+    DEVELOPMENT_TEAM: ""
+targets:
+  MMMDKitiOSDemo:
+    type: application
+    platform: iOS
+    deploymentTarget: "15.0"
+    sources:
+      - path: MMMDKitiOSDemoApp.swift
+      - path: ../Shared/DemoMarkdownSamples.swift
+        name: DemoMarkdownSamples.swift
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.mmmdkit.demo.ios
+        INFOPLIST_FILE: Info.plist
+        TARGETED_DEVICE_FAMILY: "1,2"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+schemes:
+  MMMDKitiOSDemo:
+    build:
+      targets:
+        MMMDKitiOSDemo: all
+    run:
+      config: Debug

@@ -61,10 +61,13 @@ pod "MMMDKit"
 按模块引入：
 
 ```ruby
-pod "MMMDKit/Core"
-pod "MMMDKit/ParserCmark"
-pod "MMMDKit/UIKit"
-pod "MMMDKit/AppKit"
+pod "MMMDCore"
+pod "MMMDParserCmark"
+pod "MMMDHighlighter"
+pod "MMMDMath"
+pod "MMMDHTML"
+pod "MMMDUIKit"
+pod "MMMDAppKit"
 ```
 
 ## 项目状态

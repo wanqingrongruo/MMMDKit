@@ -1,12 +1,11 @@
 # iOS Demo
 
-这个目录包含一个最小 UIKit iOS demo 源码文件。
+这个目录包含一个 UIKit iOS demo 源码文件和 CocoaPods `Podfile`。
 
 运行方式：
 
-1. 在 Xcode 中创建新的 iOS UIKit App。
-2. 添加本地 `MMMDKit` package。
-3. 引入 `MMMDParserCmark` 和 `MMMDUIKit` products。
-4. 使用 `MMMDKitiOSDemoApp.swift` 替换生成的 App 入口文件。
+1. 在当前目录执行 `pod install`。
+2. 使用生成的 `MMMDKitiOSDemo.xcworkspace` 打开工程。
+3. 选择 `MMMDKitiOSDemo` scheme 运行。
 
-demo 不放进 package manifest，避免库测试时强制触发 iOS App 构建。
+demo 通过 CocoaPods 引入本地模块 pod，覆盖 Parser、UIKit、Highlighter、Math、HTML 等能力。

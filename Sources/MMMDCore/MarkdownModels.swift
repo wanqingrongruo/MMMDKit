@@ -3,10 +3,26 @@ import Foundation
 public struct MarkdownDocument: Equatable, Sendable {
     public var blocks: [MarkdownBlock]
     public var source: String
+    public var blockSourceRanges: [SourceRange?]
 
-    public init(blocks: [MarkdownBlock], source: String = "") {
+    public init(blocks: [MarkdownBlock], source: String = "", blockSourceRanges: [SourceRange?]? = nil) {
         self.blocks = blocks
         self.source = source
+        self.blockSourceRanges = blockSourceRanges ?? Array(repeating: nil, count: blocks.count)
+    }
+}
+
+public struct SourceRange: Equatable, Sendable {
+    public var startLine: Int
+    public var startColumn: Int
+    public var endLine: Int
+    public var endColumn: Int
+
+    public init(startLine: Int, startColumn: Int, endLine: Int, endColumn: Int) {
+        self.startLine = startLine
+        self.startColumn = startColumn
+        self.endLine = endLine
+        self.endColumn = endColumn
     }
 }
 

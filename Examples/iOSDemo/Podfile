@@ -1,0 +1,13 @@
+platform :ios, '15.0'
+use_frameworks!
+project 'MMMDKitiOSDemo.xcodeproj'
+
+target 'MMMDKitiOSDemo' do
+  pod 'MMMDCore', :path => '../..'
+  pod 'MMMDParserCmark', :path => '../..'
+  pod 'MMMDStreaming', :path => '../..'
+  pod 'MMMDHighlighter', :path => '../..'
+  pod 'MMMDMath', :path => '../..'
+  pod 'MMMDHTML', :path => '../..'
+  pod 'MMMDUIKit', :path => '../..'
+end
