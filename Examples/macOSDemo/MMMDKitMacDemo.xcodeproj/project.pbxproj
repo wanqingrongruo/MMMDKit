@@ -8,31 +8,41 @@
 
 /* Begin PBXBuildFile section */
 		1270727243F082D02DB29FCA /* DemoMarkdownSamples.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03BDCB50972711FD5C1C903 /* DemoMarkdownSamples.swift */; };
+		13404513B503529B251CE964 /* Pods_MMMDKitMacDemo.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 97BA0AF5F83D860DDC8BB0DF /* Pods_MMMDKitMacDemo.framework */; };
 		B4B3A3287EC9321282EE1351 /* MMMDKitMacDemoApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 695D18B43E2E4E6E49EBD373 /* MMMDKitMacDemoApp.swift */; };
-		EC7C9CEDE8F3C817A0493365 /* Pods_MMMDKitMacDemo.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C199DAA7032CEFF1B1FD502 /* Pods_MMMDKitMacDemo.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		5897D3E6ADCAA1DE67BB240A /* Pods-MMMDKitMacDemo.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-MMMDKitMacDemo.debug.xcconfig"; path = "Target Support Files/Pods-MMMDKitMacDemo/Pods-MMMDKitMacDemo.debug.xcconfig"; sourceTree = "<group>"; };
-		5C199DAA7032CEFF1B1FD502 /* Pods_MMMDKitMacDemo.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_MMMDKitMacDemo.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		695D18B43E2E4E6E49EBD373 /* MMMDKitMacDemoApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MMMDKitMacDemoApp.swift; sourceTree = "<group>"; };
 		69D1ACCAEC197767E1BCCDD5 /* MMMDKitMacDemo.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MMMDKitMacDemo.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		771B5FD5696B6C34252B4AD8 /* Pods-MMMDKitMacDemo.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-MMMDKitMacDemo.debug.xcconfig"; path = "Target Support Files/Pods-MMMDKitMacDemo/Pods-MMMDKitMacDemo.debug.xcconfig"; sourceTree = "<group>"; };
+		97BA0AF5F83D860DDC8BB0DF /* Pods_MMMDKitMacDemo.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_MMMDKitMacDemo.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		BA5347CE1584B8BEC24043E0 /* Pods-MMMDKitMacDemo.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-MMMDKitMacDemo.release.xcconfig"; path = "Target Support Files/Pods-MMMDKitMacDemo/Pods-MMMDKitMacDemo.release.xcconfig"; sourceTree = "<group>"; };
 		D03BDCB50972711FD5C1C903 /* DemoMarkdownSamples.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoMarkdownSamples.swift; sourceTree = "<group>"; };
-		F68F1CF0D9A2AA69A6EC3179 /* Pods-MMMDKitMacDemo.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-MMMDKitMacDemo.release.xcconfig"; path = "Target Support Files/Pods-MMMDKitMacDemo/Pods-MMMDKitMacDemo.release.xcconfig"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
-		A9966004AF02304A7839461C /* Frameworks */ = {
+		D50701B3FF3620260A5C6C0D /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				EC7C9CEDE8F3C817A0493365 /* Pods_MMMDKitMacDemo.framework in Frameworks */,
+				13404513B503529B251CE964 /* Pods_MMMDKitMacDemo.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		38A7F92C7F170B3F99A01FC6 /* Pods */ = {
+			isa = PBXGroup;
+			children = (
+				771B5FD5696B6C34252B4AD8 /* Pods-MMMDKitMacDemo.debug.xcconfig */,
+				BA5347CE1584B8BEC24043E0 /* Pods-MMMDKitMacDemo.release.xcconfig */,
+			);
+			name = Pods;
+			path = Pods;
+			sourceTree = "<group>";
+		};
 		5063140AC56EE51700AD4087 /* Shared */ = {
 			isa = PBXGroup;
 			children = (
@@ -42,22 +52,12 @@
 			path = ../Shared;
 			sourceTree = "<group>";
 		};
-		7BE092F00785A8A86A892369 /* Frameworks */ = {
+		631A547D8B2D58AE64BE9979 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
-				5C199DAA7032CEFF1B1FD502 /* Pods_MMMDKitMacDemo.framework */,
+				97BA0AF5F83D860DDC8BB0DF /* Pods_MMMDKitMacDemo.framework */,
 			);
 			name = Frameworks;
-			sourceTree = "<group>";
-		};
-		A40B3930E5007F846F706738 /* Pods */ = {
-			isa = PBXGroup;
-			children = (
-				5897D3E6ADCAA1DE67BB240A /* Pods-MMMDKitMacDemo.debug.xcconfig */,
-				F68F1CF0D9A2AA69A6EC3179 /* Pods-MMMDKitMacDemo.release.xcconfig */,
-			);
-			name = Pods;
-			path = Pods;
 			sourceTree = "<group>";
 		};
 		AECCA5E910CCDB9BEB2B0C0F /* Products */ = {
@@ -74,8 +74,8 @@
 				695D18B43E2E4E6E49EBD373 /* MMMDKitMacDemoApp.swift */,
 				5063140AC56EE51700AD4087 /* Shared */,
 				AECCA5E910CCDB9BEB2B0C0F /* Products */,
-				A40B3930E5007F846F706738 /* Pods */,
-				7BE092F00785A8A86A892369 /* Frameworks */,
+				38A7F92C7F170B3F99A01FC6 /* Pods */,
+				631A547D8B2D58AE64BE9979 /* Frameworks */,
 			);
 			sourceTree = "<group>";
 		};
@@ -86,10 +86,10 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 12B233C1B35782B41F504214 /* Build configuration list for PBXNativeTarget "MMMDKitMacDemo" */;
 			buildPhases = (
-				F6922D53FB52B950FF5C75EF /* [CP] Check Pods Manifest.lock */,
+				4CA3550634C63E49DD4E646F /* [CP] Check Pods Manifest.lock */,
 				ABF9E6028D772F39B276A0CB /* Sources */,
-				A9966004AF02304A7839461C /* Frameworks */,
-				DAAD550EA7BB4F5155F18A53 /* [CP] Embed Pods Frameworks */,
+				D50701B3FF3620260A5C6C0D /* Frameworks */,
+				F631E0AE586E8FC85083BE84 /* [CP] Embed Pods Frameworks */,
 			);
 			buildRules = (
 			);
@@ -135,24 +135,7 @@
 /* End PBXProject section */
 
 /* Begin PBXShellScriptBuildPhase section */
-		DAAD550EA7BB4F5155F18A53 /* [CP] Embed Pods Frameworks */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-MMMDKitMacDemo/Pods-MMMDKitMacDemo-frameworks-${CONFIGURATION}-input-files.xcfilelist",
-			);
-			name = "[CP] Embed Pods Frameworks";
-			outputFileListPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-MMMDKitMacDemo/Pods-MMMDKitMacDemo-frameworks-${CONFIGURATION}-output-files.xcfilelist",
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-MMMDKitMacDemo/Pods-MMMDKitMacDemo-frameworks.sh\"\n";
-			showEnvVarsInLog = 0;
-		};
-		F6922D53FB52B950FF5C75EF /* [CP] Check Pods Manifest.lock */ = {
+		4CA3550634C63E49DD4E646F /* [CP] Check Pods Manifest.lock */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -174,6 +157,23 @@
 			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
 			showEnvVarsInLog = 0;
 		};
+		F631E0AE586E8FC85083BE84 /* [CP] Embed Pods Frameworks */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-MMMDKitMacDemo/Pods-MMMDKitMacDemo-frameworks-${CONFIGURATION}-input-files.xcfilelist",
+			);
+			name = "[CP] Embed Pods Frameworks";
+			outputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-MMMDKitMacDemo/Pods-MMMDKitMacDemo-frameworks-${CONFIGURATION}-output-files.xcfilelist",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-MMMDKitMacDemo/Pods-MMMDKitMacDemo-frameworks.sh\"\n";
+			showEnvVarsInLog = 0;
+		};
 /* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -191,7 +191,7 @@
 /* Begin XCBuildConfiguration section */
 		16E0F317D24CD5989A60F4C6 /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 5897D3E6ADCAA1DE67BB240A /* Pods-MMMDKitMacDemo.debug.xcconfig */;
+			baseConfigurationReference = 771B5FD5696B6C34252B4AD8 /* Pods-MMMDKitMacDemo.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				COMBINE_HIDPI_IMAGES = YES;
@@ -265,7 +265,7 @@
 		};
 		C1C6B1B9CBF51B7CA7B551D8 /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = F68F1CF0D9A2AA69A6EC3179 /* Pods-MMMDKitMacDemo.release.xcconfig */;
+			baseConfigurationReference = BA5347CE1584B8BEC24043E0 /* Pods-MMMDKitMacDemo.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				COMBINE_HIDPI_IMAGES = YES;

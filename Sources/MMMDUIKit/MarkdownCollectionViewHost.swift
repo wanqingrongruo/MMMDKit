@@ -20,7 +20,7 @@ open class MarkdownCollectionViewHost: UIView, UICollectionViewDataSource {
         setupCollectionView()
     }
 
-    open func render(_ document: MarkdownDocument, configuration: MarkdownConfiguration = .init()) {
+    open func haorender(_ document: MarkdownDocument, configuration: MarkdownConfiguration = .init()) {
         self.document = document
         self.configuration = configuration
         collectionView.reloadData()
@@ -37,7 +37,8 @@ open class MarkdownCollectionViewHost: UIView, UICollectionViewDataSource {
             actions: configuration.actions,
             codeHighlighter: configuration.codeHighlighter,
             mathRenderer: configuration.mathRenderer,
-            imageLoader: configuration.imageLoader
+            imageLoader: configuration.imageLoader,
+            codeBlockMaximumWidth: configuration.codeBlockMaximumWidth
         )
         cell.host(blockView(for: document.blocks[indexPath.item], context: context))
         return cell

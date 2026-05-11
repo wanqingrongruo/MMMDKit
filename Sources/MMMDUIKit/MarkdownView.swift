@@ -52,7 +52,8 @@ open class MarkdownView: UIView {
             actions: configuration.actions,
             codeHighlighter: configuration.codeHighlighter,
             mathRenderer: configuration.mathRenderer,
-            imageLoader: configuration.imageLoader
+            imageLoader: configuration.imageLoader,
+            codeBlockMaximumWidth: configuration.codeBlockMaximumWidth
         )
         for block in document.blocks {
             switch block {

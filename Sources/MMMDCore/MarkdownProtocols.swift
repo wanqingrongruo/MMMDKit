@@ -34,6 +34,7 @@ public struct RenderContext: Sendable {
     public var codeHighlighter: (any CodeHighlighter)?
     public var mathRenderer: (any MathRenderer)?
     public var imageLoader: (any ImageLoader)?
+    public var codeBlockMaximumWidth: Double?
 
     public init(
         theme: MarkdownTheme = .default,
@@ -41,7 +42,8 @@ public struct RenderContext: Sendable {
         actions: MarkdownActions = .init(),
         codeHighlighter: (any CodeHighlighter)? = nil,
         mathRenderer: (any MathRenderer)? = nil,
-        imageLoader: (any ImageLoader)? = nil
+        imageLoader: (any ImageLoader)? = nil,
+        codeBlockMaximumWidth: Double? = 760
     ) {
         self.theme = theme
         self.environment = environment
@@ -49,6 +51,7 @@ public struct RenderContext: Sendable {
         self.codeHighlighter = codeHighlighter
         self.mathRenderer = mathRenderer
         self.imageLoader = imageLoader
+        self.codeBlockMaximumWidth = codeBlockMaximumWidth
     }
 }
 
@@ -111,6 +114,7 @@ public struct MarkdownConfiguration: Sendable {
     public var codeHighlighter: (any CodeHighlighter)?
     public var mathRenderer: (any MathRenderer)?
     public var imageLoader: (any ImageLoader)?
+    public var codeBlockMaximumWidth: Double?
 
     public init(
         theme: MarkdownTheme = .default,
@@ -119,7 +123,8 @@ public struct MarkdownConfiguration: Sendable {
         blockRendererRegistry: BlockRendererRegistry = .init(),
         codeHighlighter: (any CodeHighlighter)? = nil,
         mathRenderer: (any MathRenderer)? = nil,
-        imageLoader: (any ImageLoader)? = nil
+        imageLoader: (any ImageLoader)? = nil,
+        codeBlockMaximumWidth: Double? = 760
     ) {
         self.theme = theme
         self.plugins = plugins
@@ -128,6 +133,7 @@ public struct MarkdownConfiguration: Sendable {
         self.codeHighlighter = codeHighlighter
         self.mathRenderer = mathRenderer
         self.imageLoader = imageLoader
+        self.codeBlockMaximumWidth = codeBlockMaximumWidth
     }
 }
 

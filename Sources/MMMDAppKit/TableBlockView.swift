@@ -4,25 +4,44 @@ import MMMDCore
 import AppKit
 
 final class TableBlockView: NSScrollView {
+    private static let minimumCellWidth: CGFloat = 120
+    private static let minimumRowHeight: CGFloat = 34
+    private static let cellTextInset: CGFloat = 8
+    private static let horizontalScrollerHeight: CGFloat = 14
+
     init(table: TableBlock, context: RenderContext) {
         super.init(frame: .zero)
         hasHorizontalScroller = true
         hasVerticalScroller = false
         drawsBackground = false
+        borderType = .noBorder
+        autohidesScrollers = true
 
-        let stack = NSStackView()
-        stack.orientation = .vertical
-        stack.alignment = .leading
-        stack.spacing = 0
+        let rows = Self.normalizedRows(for: table)
+        let columnCount = max(rows.map(\.cells.count).max() ?? 0, 1)
+        let rowHeights = rows.map { Self.rowHeight(cells: $0.cells, isHeader: $0.isHeader) }
+        let tableWidth = CGFloat(columnCount) * Self.minimumCellWidth
+        let tableHeight = rowHeights.reduce(0, +)
+        let contentView = FlippedTableDocumentView(frame: NSRect(x: 0, y: 0, width: tableWidth, height: tableHeight))
 
-        if !table.header.isEmpty {
-            stack.addArrangedSubview(Self.row(cells: table.header, isHeader: true))
+        var y: CGFloat = 0
+        for (index, row) in rows.enumerated() {
+            let rowHeight = rowHeights[index]
+            for column in 0..<columnCount {
+                let cell = column < row.cells.count ? row.cells[column] : InlineContent(text: "")
+                let cellView = Self.cellView(content: cell, isHeader: row.isHeader)
+                cellView.frame = NSRect(
+                    x: CGFloat(column) * Self.minimumCellWidth,
+                    y: y,
+                    width: Self.minimumCellWidth,
+                    height: rowHeight
+                )
+                contentView.addSubview(cellView)
+            }
+            y += rowHeight
         }
-        for row in table.rows {
-            stack.addArrangedSubview(Self.row(cells: row, isHeader: false))
-        }
 
-        documentView = stack
+        documentView = contentView
         setAccessibilityElement(true)
         setAccessibilityLabel("表格，\(table.header.count) 列，\(table.rows.count) 行")
     }
@@ -31,23 +50,67 @@ final class TableBlockView: NSScrollView {
         super.init(coder: coder)
     }
 
-    private static func row(cells: [InlineContent], isHeader: Bool) -> NSView {
-        let row = NSStackView()
-        row.orientation = .horizontal
-        row.spacing = 0
+    static func height(for table: TableBlock) -> CGFloat {
+        let rows = normalizedRows(for: table)
+        let contentHeight = rows.map { rowHeight(cells: $0.cells, isHeader: $0.isHeader) }.reduce(0, +)
+        return max(minimumRowHeight, contentHeight) + horizontalScrollerHeight
+    }
 
-        for cell in cells {
-            let label = NSTextField(wrappingLabelWithString: MarkdownTextExtractor.plainText(from: cell))
-            label.font = isHeader ? .preferredFont(forTextStyle: .headline) : .preferredFont(forTextStyle: .body)
-            label.textColor = .labelColor
-            label.wantsLayer = true
-            label.layer?.borderColor = NSColor.separatorColor.cgColor
-            label.layer?.borderWidth = 0.5
-            label.widthAnchor.constraint(greaterThanOrEqualToConstant: 120).isActive = true
-            row.addArrangedSubview(label)
+    private static func normalizedRows(for table: TableBlock) -> [(cells: [InlineContent], isHeader: Bool)] {
+        var rows: [(cells: [InlineContent], isHeader: Bool)] = []
+        if !table.header.isEmpty {
+            rows.append((table.header, true))
         }
+        rows.append(contentsOf: table.rows.map { ($0, false) })
+        return rows.isEmpty ? [([InlineContent(text: "")], false)] : rows
+    }
 
-        return row
+    private static func rowHeight(cells: [InlineContent], isHeader: Bool) -> CGFloat {
+        let font: NSFont = isHeader ? .preferredFont(forTextStyle: .headline) : .preferredFont(forTextStyle: .body)
+        let textWidth = max(1, minimumCellWidth - cellTextInset * 2)
+        let contentHeight = cells.map { cell -> CGFloat in
+            let text = MarkdownTextExtractor.plainText(from: cell)
+            let rect = (text as NSString).boundingRect(
+                with: NSSize(width: textWidth, height: CGFloat.greatestFiniteMagnitude),
+                options: [.usesLineFragmentOrigin, .usesFontLeading],
+                attributes: [.font: font]
+            )
+            return ceil(rect.height)
+        }.max() ?? 0
+        return max(minimumRowHeight, contentHeight + cellTextInset * 2)
+    }
+
+    private static func cellView(content: InlineContent, isHeader: Bool) -> NSView {
+        let cellView = NSView(frame: .zero)
+        cellView.wantsLayer = true
+        cellView.layer?.backgroundColor = (isHeader ? NSColor.controlBackgroundColor : .clear).cgColor
+        cellView.layer?.borderColor = NSColor.separatorColor.cgColor
+        cellView.layer?.borderWidth = 0.5
+
+        let label = NSTextField(wrappingLabelWithString: MarkdownTextExtractor.plainText(from: content))
+        label.font = isHeader ? .preferredFont(forTextStyle: .headline) : .preferredFont(forTextStyle: .body)
+        label.textColor = .labelColor
+        label.drawsBackground = false
+        label.lineBreakMode = .byWordWrapping
+        label.maximumNumberOfLines = 0
+        label.translatesAutoresizingMaskIntoConstraints = false
+
+        cellView.addSubview(label)
+        NSLayoutConstraint.activate([
+            label.leadingAnchor.constraint(equalTo: cellView.leadingAnchor, constant: cellTextInset),
+            label.trailingAnchor.constraint(equalTo: cellView.trailingAnchor, constant: -cellTextInset),
+            label.centerYAnchor.constraint(equalTo: cellView.centerYAnchor),
+            label.topAnchor.constraint(greaterThanOrEqualTo: cellView.topAnchor, constant: cellTextInset / 2),
+            label.bottomAnchor.constraint(lessThanOrEqualTo: cellView.bottomAnchor, constant: -cellTextInset / 2)
+        ])
+
+        return cellView
+    }
+}
+
+private final class FlippedTableDocumentView: NSView {
+    override var isFlipped: Bool {
+        true
     }
 }
 #endif

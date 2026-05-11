@@ -14,7 +14,7 @@ final class CodeBlockView: NSView {
 
         let stack = NSStackView()
         stack.orientation = .vertical
-        stack.alignment = .leading
+        stack.alignment = .width
         stack.spacing = 8
         stack.translatesAutoresizingMaskIntoConstraints = false
 
@@ -73,6 +73,10 @@ final class CodeBlockView: NSView {
         languageLabel.font = .preferredFont(forTextStyle: .caption1)
         languageLabel.textColor = .secondaryLabelColor
 
+        let spacer = NSView()
+        spacer.setContentHuggingPriority(.defaultLow, for: .horizontal)
+        spacer.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+
         let copyButton = CodeCopyButton(title: "复制", target: nil, action: nil)
         copyButton.bezelStyle = .inline
         copyButton.copyContext = CodeCopyContext(codeBlock: codeBlock, actions: context.actions)
@@ -80,6 +84,7 @@ final class CodeBlockView: NSView {
         copyButton.action = #selector(CopyButtonTarget.copyCode(_:))
 
         row.addArrangedSubview(languageLabel)
+        row.addArrangedSubview(spacer)
         row.addArrangedSubview(copyButton)
         return row
     }
