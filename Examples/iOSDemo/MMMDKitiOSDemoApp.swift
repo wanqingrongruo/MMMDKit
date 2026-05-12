@@ -359,11 +359,13 @@ private final class ChatMessageCell: UICollectionViewCell {
         super.init(frame: frame)
         bubble.translatesAutoresizingMaskIntoConstraints = false
         contentView.addSubview(bubble)
+        let bottomConstraint = bubble.bottomAnchor.constraint(equalTo: contentView.bottomAnchor)
+        bottomConstraint.priority = .init(999)
         NSLayoutConstraint.activate([
             bubble.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
             bubble.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
             bubble.topAnchor.constraint(equalTo: contentView.topAnchor),
-            bubble.bottomAnchor.constraint(equalTo: contentView.bottomAnchor)
+            bottomConstraint
         ])
     }
 
@@ -466,9 +468,12 @@ private final class ChatMessageBubbleView: UIView {
         markdownView.translatesAutoresizingMaskIntoConstraints = false
         bubbleView.addSubview(markdownView)
 
+        let bubbleBottomConstraint = bubbleView.bottomAnchor.constraint(equalTo: bottomAnchor)
+        bubbleBottomConstraint.priority = .init(999)
+
         NSLayoutConstraint.activate([
             bubbleView.topAnchor.constraint(equalTo: topAnchor),
-            bubbleView.bottomAnchor.constraint(equalTo: bottomAnchor),
+            bubbleBottomConstraint,
             bubbleView.widthAnchor.constraint(lessThanOrEqualTo: widthAnchor, multiplier: 0.9),
 
             titleLabel.leadingAnchor.constraint(equalTo: bubbleView.leadingAnchor, constant: 14),

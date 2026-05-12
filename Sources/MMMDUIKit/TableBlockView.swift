@@ -106,13 +106,25 @@ final class TableBlockView: UIView {
         label.translatesAutoresizingMaskIntoConstraints = false
         cellView.addSubview(label)
 
+        let heightConstraint = cellView.heightAnchor.constraint(greaterThanOrEqualToConstant: minimumRowHeight)
+        heightConstraint.priority = .init(999)
+        
+        let topConstraint = label.topAnchor.constraint(greaterThanOrEqualTo: cellView.topAnchor, constant: 8)
+        topConstraint.priority = .init(999)
+        
+        let bottomConstraint = label.bottomAnchor.constraint(lessThanOrEqualTo: cellView.bottomAnchor, constant: -8)
+        bottomConstraint.priority = .init(999)
+        
+        let centerYConstraint = label.centerYAnchor.constraint(equalTo: cellView.centerYAnchor)
+        centerYConstraint.priority = .init(999)
+
         NSLayoutConstraint.activate([
-            cellView.heightAnchor.constraint(greaterThanOrEqualToConstant: minimumRowHeight),
+            heightConstraint,
             label.leadingAnchor.constraint(equalTo: cellView.leadingAnchor, constant: 12),
             label.trailingAnchor.constraint(equalTo: cellView.trailingAnchor, constant: -12),
-            label.topAnchor.constraint(greaterThanOrEqualTo: cellView.topAnchor, constant: 8),
-            label.bottomAnchor.constraint(lessThanOrEqualTo: cellView.bottomAnchor, constant: -8),
-            label.centerYAnchor.constraint(equalTo: cellView.centerYAnchor)
+            topConstraint,
+            bottomConstraint,
+            centerYConstraint
         ])
 
         return cellView
