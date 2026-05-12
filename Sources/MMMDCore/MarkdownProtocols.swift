@@ -96,9 +96,13 @@ public protocol ImageLoader: Sendable {
     func loadImageData(from url: URL) async throws -> Data
 }
 
+/// 用户在 Markdown 视图上触发的交互行为回调集合
 public struct MarkdownActions: Sendable {
+    /// 当用户点击 Markdown 中的超链接时触发，参数为目标 URL
     public var onLinkTap: (@Sendable (URL) -> Void)?
+    /// 当用户点击代码块的复制按钮时触发，参数分别为代码源码和该代码块的编程语言标识
     public var onCopyCode: (@Sendable (_ code: String, _ language: String?) -> Void)?
+    /// 当视图内的动态内容（如异步图片加载完毕、公式渲染完成）导致容器高度发生变化时触发
     public var onHeightChange: (@Sendable (Double) -> Void)?
 
     public init(
@@ -112,15 +116,25 @@ public struct MarkdownActions: Sendable {
     }
 }
 
+/// 渲染 Markdown 视图时的全局配置项
 public struct MarkdownConfiguration: Sendable {
+    /// 样式主题，控制字体、颜色、间距及代码高亮主题
     public var theme: MarkdownTheme
+    /// 插件列表，用于在渲染前对 Markdown 抽象语法树 (AST) 进行预处理和转换
     public var plugins: [MarkdownPlugin]
+    /// 交互事件的回调闭包集合，如点击链接、复制代码等
     public var actions: MarkdownActions
+    /// 块级元素的自定义渲染器注册表，用于扩展或覆盖默认的块级渲染规则（如自定义 HTML 块）
     public var blockRendererRegistry: BlockRendererRegistry
+    /// 行内元素的自定义渲染器注册表，用于扩展或覆盖默认的行内渲染规则（如自定义标签）
     public var inlineRendererRegistry: InlineRendererRegistry
+    /// 代码高亮器实现。如果不提供，代码块将仅以等宽字体展示纯文本
     public var codeHighlighter: (any CodeHighlighter)?
+    /// 数学公式渲染器实现。如果不提供，公式块将仅展示 LaTeX 源码
     public var mathRenderer: (any MathRenderer)?
+    /// 图片加载器实现。如果不提供，图片将无法从网络加载显示
     public var imageLoader: (any ImageLoader)?
+    /// 代码块和表格等容器的最大允许宽度。超出该宽度时，容器内部允许水平滚动
     public var codeBlockMaximumWidth: Double?
 
     public init(

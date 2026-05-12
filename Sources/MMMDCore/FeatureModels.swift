@@ -1,9 +1,14 @@
 import Foundation
 
+/// 专用于代码块的高亮主题配置
 public struct CodeTheme: Equatable, Sendable {
+    /// 主题的唯一名称标识
     public var name: String
+    /// 默认的代码前景色（当没有匹配到任何特定 token 样式时使用的文本颜色）
     public var foregroundColor: String
+    /// 代码块的主背景色（会被底层视图用来作为底层颜色填充）
     public var backgroundColor: String
+    /// 针对特定语法单元（如 keyword, string, number, comment 等）独立定制的样式表
     public var tokenStyles: [String: CodeTokenStyle]
 
     public init(
@@ -45,8 +50,11 @@ public struct CodeTheme: Equatable, Sendable {
     public static let `default` = CodeTheme.github
 }
 
+/// 单个代码语法单元（Token）的视觉样式
 public struct CodeTokenStyle: Equatable, Sendable {
+    /// 该语法单元的文本颜色（支持系统颜色名称或十六进制色值，如 "#FF0000"）
     public var foregroundColor: String
+    /// 该语法单元的字体特征（可选 "bold" 加粗, "italic" 斜体）
     public var fontTraits: [String]
 
     public init(foregroundColor: String, fontTraits: [String] = []) {
