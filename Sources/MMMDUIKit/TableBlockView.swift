@@ -3,10 +3,32 @@ import MMMDCore
 #if canImport(UIKit)
 import UIKit
 
-final class TableBlockView: UIScrollView {
+final class TableBlockView: UIView {
+    private static let toolbarHeight: CGFloat = 36
+    private static let minimumCellWidth: CGFloat = 132
+    private static let minimumRowHeight: CGFloat = 42
+    let preferredContentWidth: CGFloat
+
     init(table: TableBlock, context: RenderContext) {
+        let rows = Self.normalizedRows(for: table)
+        let columnCount = max(rows.map(\.count).max() ?? 0, 1)
+        preferredContentWidth = CGFloat(columnCount) * Self.minimumCellWidth
         super.init(frame: .zero)
-        showsHorizontalScrollIndicator = true
+        backgroundColor = .systemBackground
+        layer.cornerRadius = 10
+        layer.borderColor = UIColor.separator.cgColor
+        layer.borderWidth = 0.5
+        clipsToBounds = true
+
+        let toolbar = Self.toolbar(title: "表格")
+        toolbar.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(toolbar)
+
+        let scrollView = UIScrollView()
+        scrollView.showsHorizontalScrollIndicator = true
+        scrollView.backgroundColor = .systemBackground
+        scrollView.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(scrollView)
 
         let stack = UIStackView()
         stack.axis = .vertical
@@ -20,19 +42,30 @@ final class TableBlockView: UIScrollView {
             stack.addArrangedSubview(Self.row(cells: row, isHeader: false))
         }
 
-        addSubview(stack)
+        scrollView.addSubview(stack)
         NSLayoutConstraint.activate([
-            stack.leadingAnchor.constraint(equalTo: contentLayoutGuide.leadingAnchor),
-            stack.trailingAnchor.constraint(equalTo: contentLayoutGuide.trailingAnchor),
-            stack.topAnchor.constraint(equalTo: contentLayoutGuide.topAnchor),
-            stack.bottomAnchor.constraint(equalTo: contentLayoutGuide.bottomAnchor),
-            stack.heightAnchor.constraint(equalTo: frameLayoutGuide.heightAnchor)
+            toolbar.leadingAnchor.constraint(equalTo: leadingAnchor),
+            toolbar.trailingAnchor.constraint(equalTo: trailingAnchor),
+            toolbar.topAnchor.constraint(equalTo: topAnchor),
+            toolbar.heightAnchor.constraint(equalToConstant: Self.toolbarHeight),
+
+            scrollView.leadingAnchor.constraint(equalTo: leadingAnchor),
+            scrollView.trailingAnchor.constraint(equalTo: trailingAnchor),
+            scrollView.topAnchor.constraint(equalTo: toolbar.bottomAnchor),
+            scrollView.bottomAnchor.constraint(equalTo: bottomAnchor),
+
+            stack.leadingAnchor.constraint(equalTo: scrollView.contentLayoutGuide.leadingAnchor),
+            stack.trailingAnchor.constraint(equalTo: scrollView.contentLayoutGuide.trailingAnchor),
+            stack.topAnchor.constraint(equalTo: scrollView.contentLayoutGuide.topAnchor),
+            stack.bottomAnchor.constraint(equalTo: scrollView.contentLayoutGuide.bottomAnchor),
+            stack.heightAnchor.constraint(equalTo: scrollView.frameLayoutGuide.heightAnchor)
         ])
         isAccessibilityElement = true
         accessibilityLabel = "表格，\(table.header.count) 列，\(table.rows.count) 行"
     }
 
     required init?(coder: NSCoder) {
+        preferredContentWidth = Self.minimumCellWidth
         super.init(coder: coder)
     }
 
@@ -42,19 +75,76 @@ final class TableBlockView: UIScrollView {
         row.spacing = 0
 
         for cell in cells {
-            let label = UILabel()
-            label.numberOfLines = 0
-            label.font = isHeader ? .preferredFont(forTextStyle: .headline) : .preferredFont(forTextStyle: .body)
-            label.textColor = .label
-            label.text = MarkdownTextExtractor.plainText(from: cell)
-            label.backgroundColor = isHeader ? .tertiarySystemBackground : .clear
-            label.layer.borderColor = UIColor.separator.cgColor
-            label.layer.borderWidth = 0.5
-            label.widthAnchor.constraint(greaterThanOrEqualToConstant: 120).isActive = true
-            row.addArrangedSubview(label)
+            let cellView = Self.cellView(content: cell, isHeader: isHeader)
+            cellView.widthAnchor.constraint(equalToConstant: minimumCellWidth).isActive = true
+            row.addArrangedSubview(cellView)
         }
 
         return row
+    }
+
+    private static func normalizedRows(for table: TableBlock) -> [[InlineContent]] {
+        (table.header.isEmpty ? [] : [table.header]) + table.rows
+    }
+
+    private static func cellView(content: InlineContent, isHeader: Bool) -> UIView {
+        let cellView = UIView()
+        cellView.backgroundColor = isHeader ? .secondarySystemBackground : .systemBackground
+        cellView.layer.borderColor = UIColor.separator.cgColor
+        cellView.layer.borderWidth = 0.5
+
+        let label = UILabel()
+        label.numberOfLines = 0
+        label.font = isHeader ? .preferredFont(forTextStyle: .headline) : .preferredFont(forTextStyle: .body)
+        label.textColor = .label
+        label.text = MarkdownTextExtractor.plainText(from: content)
+        label.translatesAutoresizingMaskIntoConstraints = false
+        cellView.addSubview(label)
+
+        NSLayoutConstraint.activate([
+            cellView.heightAnchor.constraint(greaterThanOrEqualToConstant: minimumRowHeight),
+            label.leadingAnchor.constraint(equalTo: cellView.leadingAnchor, constant: 12),
+            label.trailingAnchor.constraint(equalTo: cellView.trailingAnchor, constant: -12),
+            label.topAnchor.constraint(greaterThanOrEqualTo: cellView.topAnchor, constant: 8),
+            label.bottomAnchor.constraint(lessThanOrEqualTo: cellView.bottomAnchor, constant: -8),
+            label.centerYAnchor.constraint(equalTo: cellView.centerYAnchor)
+        ])
+
+        return cellView
+    }
+
+    private static func toolbar(title: String) -> UIView {
+        let container = UIView()
+        container.backgroundColor = .secondarySystemBackground
+
+        let label = UILabel()
+        label.font = .preferredFont(forTextStyle: .caption1)
+        label.textColor = .secondaryLabel
+        label.text = title
+        label.translatesAutoresizingMaskIntoConstraints = false
+
+        let actions = UIStackView()
+        actions.axis = .horizontal
+        actions.alignment = .center
+        actions.spacing = 14
+        actions.translatesAutoresizingMaskIntoConstraints = false
+        for symbol in ["doc.on.doc", "arrow.down", "arrow.up.left.and.arrow.down.right"] {
+            let imageView = UIImageView(image: UIImage(systemName: symbol))
+            imageView.tintColor = .secondaryLabel
+            imageView.contentMode = .scaleAspectFit
+            imageView.widthAnchor.constraint(equalToConstant: 16).isActive = true
+            actions.addArrangedSubview(imageView)
+        }
+
+        container.addSubview(label)
+        container.addSubview(actions)
+        NSLayoutConstraint.activate([
+            label.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 12),
+            label.centerYAnchor.constraint(equalTo: container.centerYAnchor),
+            actions.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -12),
+            actions.centerYAnchor.constraint(equalTo: container.centerYAnchor)
+        ])
+        return container
     }
 }
 #endif

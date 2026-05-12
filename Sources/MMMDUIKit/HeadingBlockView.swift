@@ -15,6 +15,7 @@ final class HeadingBlockView: UILabel {
         isAccessibilityElement = true
         accessibilityTraits.insert(.header)
         accessibilityLabel = text
+        setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
     }
 
     required init?(coder: NSCoder) {

@@ -98,6 +98,38 @@ public enum InlineNode: Equatable, Sendable {
     case custom(name: String, payload: String)
 }
 
+public enum InlineNodeKind: String, Hashable, Sendable {
+    case text
+    case emphasis
+    case strong
+    case code
+    case link
+    case image
+    case softBreak
+    case lineBreak
+    case math
+    case html
+    case custom
+}
+
+public extension InlineNode {
+    var kind: InlineNodeKind {
+        switch self {
+        case .text: return .text
+        case .emphasis: return .emphasis
+        case .strong: return .strong
+        case .code: return .code
+        case .link: return .link
+        case .image: return .image
+        case .softBreak: return .softBreak
+        case .lineBreak: return .lineBreak
+        case .math: return .math
+        case .html: return .html
+        case .custom: return .custom
+        }
+    }
+}
+
 public struct ListBlock: Equatable, Sendable {
     public enum Style: Equatable, Sendable {
         case ordered(start: Int)

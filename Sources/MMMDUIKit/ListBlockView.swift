@@ -36,6 +36,7 @@ final class ListBlockView: UIStackView {
         contentLabel.font = .preferredFont(forTextStyle: .body)
         contentLabel.textColor = .label
         contentLabel.text = item.blocks.map(MarkdownTextExtractor.plainText(from:)).joined(separator: "\n")
+        contentLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         contentLabel.isAccessibilityElement = true
         contentLabel.accessibilityLabel = "\(marker) \(contentLabel.text ?? "")"
 

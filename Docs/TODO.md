@@ -45,20 +45,20 @@
 
 ## Phase 3
 
-- [ ] 稳定 `MarkdownConfiguration`。
-- [ ] 添加自定义 parser 示例。
-- [ ] 添加自定义 block renderer 示例。
-- [ ] 添加自定义 inline renderer 示例。
-- [ ] 添加 plugin transform 示例。
-- [ ] 添加自定义 theme 示例。
-- [ ] 添加模块化 CocoaPods 验证。
+- [x] 稳定 `MarkdownConfiguration`。
+- [x] 添加自定义 parser 示例。
+- [x] 添加自定义 block renderer 示例。
+- [x] 添加自定义 inline renderer 示例。
+- [x] 添加 plugin transform 示例。
+- [x] 添加自定义 theme 示例。
+- [x] 添加模块化 CocoaPods 验证。
 
 ## Phase 4
 
-- [ ] 原型验证跨 block 选择。
-- [ ] 添加大 Markdown 性能测试。
-- [ ] 添加超大代码块虚拟化。
-- [ ] 添加大表格虚拟化。
-- [ ] 添加可选 Tree-sitter highlighter。
+- [x] 原型验证跨 block 选择。
+- [x] 添加大 Markdown 性能测试。
+- [x] 添加超大代码块虚拟化。
+- [x] 添加大表格虚拟化。
+- [x] 添加可选 Tree-sitter highlighter。
 - [ ] 添加 renderer snapshot tests。
-- [ ] 添加 AI chat benchmark 示例。
+- [x] 添加 AI chat benchmark 示例。

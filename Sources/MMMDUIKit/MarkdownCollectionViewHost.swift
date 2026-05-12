@@ -20,10 +20,15 @@ open class MarkdownCollectionViewHost: UIView, UICollectionViewDataSource {
         setupCollectionView()
     }
 
-    open func haorender(_ document: MarkdownDocument, configuration: MarkdownConfiguration = .init()) {
-        self.document = document
+    open func render(_ document: MarkdownDocument, configuration: MarkdownConfiguration = .init()) {
         self.configuration = configuration
+        self.document = (try? configuration.transformedDocument(document)) ?? document
         collectionView.reloadData()
+    }
+
+    @available(*, deprecated, renamed: "render(_:configuration:)")
+    open func haorender(_ document: MarkdownDocument, configuration: MarkdownConfiguration = .init()) {
+        render(document, configuration: configuration)
     }
 
     public func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
@@ -35,6 +40,8 @@ open class MarkdownCollectionViewHost: UIView, UICollectionViewDataSource {
         let context = RenderContext(
             theme: configuration.theme,
             actions: configuration.actions,
+            blockRendererRegistry: configuration.blockRendererRegistry,
+            inlineRendererRegistry: configuration.inlineRendererRegistry,
             codeHighlighter: configuration.codeHighlighter,
             mathRenderer: configuration.mathRenderer,
             imageLoader: configuration.imageLoader,
@@ -87,9 +94,16 @@ open class MarkdownCollectionViewHost: UIView, UICollectionViewDataSource {
         case .blockquote(let blocks):
             return BlockquoteBlockView(blocks: blocks, context: context)
         case .code(let codeBlock):
-            return CodeBlockView(codeBlock: codeBlock, context: context)
+            return CollectionMaxWidthBlockContainer(
+                contentView: CodeBlockView(codeBlock: codeBlock, context: context),
+                maximumWidth: context.codeBlockMaximumWidth.map { CGFloat($0) }
+            )
         case .table(let table):
-            return TableBlockView(table: table, context: context)
+            let tableView = TableBlockView(table: table, context: context)
+            return CollectionShrinkWrappedBlockContainer(
+                contentView: tableView,
+                preferredWidth: tableView.preferredContentWidth
+            )
         case .math(let mathBlock):
             return MathBlockView(mathBlock: mathBlock, context: context)
         case .html(let htmlBlock):
@@ -102,6 +116,56 @@ open class MarkdownCollectionViewHost: UIView, UICollectionViewDataSource {
             label.text = MarkdownTextExtractor.plainText(from: block)
             return label
         }
+    }
+}
+
+private final class CollectionMaxWidthBlockContainer: UIView {
+    init(contentView: UIView, maximumWidth: CGFloat?) {
+        super.init(frame: .zero)
+        contentView.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(contentView)
+
+        let fillWidth = contentView.trailingAnchor.constraint(equalTo: trailingAnchor)
+        fillWidth.priority = .defaultHigh
+
+        var constraints = [
+            contentView.leadingAnchor.constraint(equalTo: leadingAnchor),
+            contentView.topAnchor.constraint(equalTo: topAnchor),
+            contentView.bottomAnchor.constraint(equalTo: bottomAnchor),
+            contentView.trailingAnchor.constraint(lessThanOrEqualTo: trailingAnchor),
+            fillWidth
+        ]
+        if let maximumWidth, maximumWidth > 0 {
+            constraints.append(contentView.widthAnchor.constraint(lessThanOrEqualToConstant: maximumWidth))
+        }
+        NSLayoutConstraint.activate(constraints)
+    }
+
+    required init?(coder: NSCoder) {
+        super.init(coder: coder)
+    }
+}
+
+private final class CollectionShrinkWrappedBlockContainer: UIView {
+    init(contentView: UIView, preferredWidth: CGFloat) {
+        super.init(frame: .zero)
+        contentView.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(contentView)
+
+        let preferredWidthConstraint = contentView.widthAnchor.constraint(equalToConstant: preferredWidth)
+        preferredWidthConstraint.priority = .defaultHigh
+
+        NSLayoutConstraint.activate([
+            contentView.leadingAnchor.constraint(equalTo: leadingAnchor),
+            contentView.topAnchor.constraint(equalTo: topAnchor),
+            contentView.bottomAnchor.constraint(equalTo: bottomAnchor),
+            contentView.trailingAnchor.constraint(lessThanOrEqualTo: trailingAnchor),
+            preferredWidthConstraint
+        ])
+    }
+
+    required init?(coder: NSCoder) {
+        super.init(coder: coder)
     }
 }
 

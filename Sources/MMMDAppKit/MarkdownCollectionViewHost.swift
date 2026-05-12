@@ -21,8 +21,8 @@ open class MarkdownCollectionViewHost: NSView, NSCollectionViewDataSource, NSCol
     }
 
     open func render(_ document: MarkdownDocument, configuration: MarkdownConfiguration = .init()) {
-        self.document = document
         self.configuration = configuration
+        self.document = (try? configuration.transformedDocument(document)) ?? document
         collectionLayout.invalidateLayout()
         collectionView.reloadData()
     }
@@ -36,6 +36,8 @@ open class MarkdownCollectionViewHost: NSView, NSCollectionViewDataSource, NSCol
         let context = RenderContext(
             theme: configuration.theme,
             actions: configuration.actions,
+            blockRendererRegistry: configuration.blockRendererRegistry,
+            inlineRendererRegistry: configuration.inlineRendererRegistry,
             codeHighlighter: configuration.codeHighlighter,
             mathRenderer: configuration.mathRenderer,
             imageLoader: configuration.imageLoader,
@@ -101,7 +103,11 @@ open class MarkdownCollectionViewHost: NSView, NSCollectionViewDataSource, NSCol
                 maximumWidth: context.codeBlockMaximumWidth.map { CGFloat($0) }
             )
         case .table(let table):
-            return TableBlockView(table: table, context: context)
+            let tableView = TableBlockView(table: table, context: context)
+            return ShrinkWrappedBlockContainer(
+                contentView: tableView,
+                preferredWidth: tableView.preferredContentWidth
+            )
         case .math(let mathBlock):
             return MathBlockView(mathBlock: mathBlock, context: context)
         case .html(let htmlBlock):
@@ -173,6 +179,29 @@ private final class MaxWidthBlockContainer: NSView {
             constraints.append(contentView.widthAnchor.constraint(lessThanOrEqualToConstant: maximumWidth))
         }
         NSLayoutConstraint.activate(constraints)
+    }
+
+    required init?(coder: NSCoder) {
+        super.init(coder: coder)
+    }
+}
+
+private final class ShrinkWrappedBlockContainer: NSView {
+    init(contentView: NSView, preferredWidth: CGFloat) {
+        super.init(frame: .zero)
+        contentView.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(contentView)
+
+        let preferredWidthConstraint = contentView.widthAnchor.constraint(equalToConstant: preferredWidth)
+        preferredWidthConstraint.priority = .defaultHigh
+
+        NSLayoutConstraint.activate([
+            contentView.leadingAnchor.constraint(equalTo: leadingAnchor),
+            contentView.topAnchor.constraint(equalTo: topAnchor),
+            contentView.bottomAnchor.constraint(equalTo: bottomAnchor),
+            contentView.trailingAnchor.constraint(lessThanOrEqualTo: trailingAnchor),
+            preferredWidthConstraint
+        ])
     }
 
     required init?(coder: NSCoder) {

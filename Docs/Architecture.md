@@ -97,17 +97,18 @@ Token Delta
 每个核心子系统都应该可以替换：
 
 ```swift
-configuration.parser = MyParser()
-configuration.highlighter = MyHighlighter()
+let parser: MarkdownParser = MyParser()
+configuration.codeHighlighter = MyHighlighter()
 configuration.mathRenderer = MyMathRenderer()
-configuration.htmlRenderer = MyHTMLRenderer()
 configuration.plugins = [MentionPlugin(), MermaidPlugin()]
 ```
 
 Block renderer 按 block 类型注册：
 
 ```swift
-configuration.registerBlockRenderer(.code, renderer: MyCodeRenderer())
+var registry = BlockRendererRegistry()
+registry.register(kind: .code, rendererName: "MyCodeRenderer")
+configuration.blockRendererRegistry = registry
 ```
 
 ## 复杂内容策略

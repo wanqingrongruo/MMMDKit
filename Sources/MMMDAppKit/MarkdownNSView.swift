@@ -22,7 +22,7 @@ open class MarkdownNSView: NSView {
     private func setupView() {
         setAccessibilityElement(false)
         stackView.orientation = .vertical
-        stackView.alignment = .leading
+        stackView.alignment = .width
         stackView.spacing = configuration.theme.spacing.blockSpacing
         stackView.translatesAutoresizingMaskIntoConstraints = false
         addSubview(stackView)
@@ -30,15 +30,56 @@ open class MarkdownNSView: NSView {
             stackView.leadingAnchor.constraint(equalTo: leadingAnchor),
             stackView.trailingAnchor.constraint(equalTo: trailingAnchor),
             stackView.topAnchor.constraint(equalTo: topAnchor),
-            stackView.bottomAnchor.constraint(lessThanOrEqualTo: bottomAnchor)
+            stackView.bottomAnchor.constraint(equalTo: bottomAnchor)
         ])
     }
 
     open func render(_ document: MarkdownDocument) {
-        self.document = document
+        self.document = (try? configuration.transformedDocument(document)) ?? document
         rebuildBlocks()
-        setAccessibilityLabel(MarkdownTextExtractor.plainText(from: document))
+        setAccessibilityLabel(MarkdownTextExtractor.plainText(from: self.document))
         needsLayout = true
+    }
+
+    public static func estimatedHeight(for document: MarkdownDocument, width: CGFloat, configuration: MarkdownConfiguration) -> CGFloat {
+        let blockHeights = document.blocks.map { block -> CGFloat in
+            switch block {
+            case .heading:
+                return max(24, textHeight(MarkdownTextExtractor.plainText(from: block), width: width, font: .preferredFont(forTextStyle: .headline)))
+            case .paragraph:
+                return max(20, textHeight(MarkdownTextExtractor.plainText(from: block), width: width, font: .preferredFont(forTextStyle: .body)))
+            case .list(let list):
+                return list.items.map { item in
+                    textHeight(item.blocks.map(MarkdownTextExtractor.plainText(from:)).joined(separator: "\n"), width: max(1, width - 32), font: .preferredFont(forTextStyle: .body)) + 6
+                }.reduce(0, +)
+            case .blockquote:
+                return max(40, textHeight(MarkdownTextExtractor.plainText(from: block), width: max(1, width - 41), font: .preferredFont(forTextStyle: .body)) + 20)
+            case .code(let codeBlock):
+                let lineCount = max(1, codeBlock.content.split(separator: "\n", omittingEmptySubsequences: false).count)
+                return CGFloat(lineCount) * 18 + 58
+            case .table(let table):
+                return CGFloat(max(1, table.rows.count + (table.header.isEmpty ? 0 : 1))) * 42 + 50
+            case .math:
+                return max(40, textHeight(MarkdownTextExtractor.plainText(from: block), width: max(1, width - 24), font: .preferredFont(forTextStyle: .body)) + 20)
+            case .html:
+                return 120
+            case .image:
+                return 180
+            default:
+                return max(20, textHeight(MarkdownTextExtractor.plainText(from: block), width: width, font: .preferredFont(forTextStyle: .body)))
+            }
+        }
+        let spacing = max(0, CGFloat(max(0, document.blocks.count - 1)) * configuration.theme.spacing.blockSpacing)
+        return max(1, blockHeights.reduce(0, +) + spacing)
+    }
+
+    private static func textHeight(_ text: String, width: CGFloat, font: NSFont) -> CGFloat {
+        let rect = (text as NSString).boundingRect(
+            with: NSSize(width: max(1, width), height: CGFloat.greatestFiniteMagnitude),
+            options: [.usesLineFragmentOrigin, .usesFontLeading],
+            attributes: [.font: font]
+        )
+        return ceil(rect.height)
     }
 
     private func rebuildBlocks() {
@@ -50,35 +91,97 @@ open class MarkdownNSView: NSView {
         let context = RenderContext(
             theme: configuration.theme,
             actions: configuration.actions,
+            blockRendererRegistry: configuration.blockRendererRegistry,
+            inlineRendererRegistry: configuration.inlineRendererRegistry,
             codeHighlighter: configuration.codeHighlighter,
             mathRenderer: configuration.mathRenderer,
             imageLoader: configuration.imageLoader,
             codeBlockMaximumWidth: configuration.codeBlockMaximumWidth
         )
         for block in document.blocks {
+            let blockView: NSView
             switch block {
             case .heading(let level, let content):
-                stackView.addArrangedSubview(HeadingBlockView(level: level, content: content, context: context))
+                blockView = HeadingBlockView(level: level, content: content, context: context)
             case .paragraph(let content):
-                stackView.addArrangedSubview(ParagraphBlockView(content: content, context: context))
+                blockView = ParagraphBlockView(content: content, context: context)
             case .list(let list):
-                stackView.addArrangedSubview(ListBlockView(list: list, context: context))
+                blockView = ListBlockView(list: list, context: context)
             case .blockquote(let blocks):
-                stackView.addArrangedSubview(BlockquoteBlockView(blocks: blocks, context: context))
+                blockView = BlockquoteBlockView(blocks: blocks, context: context)
             case .code(let codeBlock):
-                stackView.addArrangedSubview(CodeBlockView(codeBlock: codeBlock, context: context))
+                blockView = MarkdownNSMaxWidthBlockContainer(
+                    contentView: CodeBlockView(codeBlock: codeBlock, context: context),
+                    maximumWidth: context.codeBlockMaximumWidth.map { CGFloat($0) }
+                )
             case .table(let table):
-                stackView.addArrangedSubview(TableBlockView(table: table, context: context))
+                let tableView = TableBlockView(table: table, context: context)
+                blockView = MarkdownNSShrinkWrappedBlockContainer(
+                    contentView: tableView,
+                    preferredWidth: tableView.preferredContentWidth
+                )
             case .math(let mathBlock):
-                stackView.addArrangedSubview(MathBlockView(mathBlock: mathBlock, context: context))
+                blockView = MathBlockView(mathBlock: mathBlock, context: context)
             case .html(let htmlBlock):
-                stackView.addArrangedSubview(HTMLBlockView(htmlBlock: htmlBlock, context: context))
+                blockView = HTMLBlockView(htmlBlock: htmlBlock, context: context)
             case .image(let imageBlock):
-                stackView.addArrangedSubview(ImageBlockView(imageBlock: imageBlock, context: context))
+                blockView = ImageBlockView(imageBlock: imageBlock, context: context)
             default:
                 continue
             }
+            blockView.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+            stackView.addArrangedSubview(blockView)
         }
+    }
+}
+
+private final class MarkdownNSMaxWidthBlockContainer: NSView {
+    init(contentView: NSView, maximumWidth: CGFloat?) {
+        super.init(frame: .zero)
+        contentView.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(contentView)
+
+        let fillWidth = contentView.trailingAnchor.constraint(equalTo: trailingAnchor)
+        fillWidth.priority = .defaultHigh
+
+        var constraints = [
+            contentView.leadingAnchor.constraint(equalTo: leadingAnchor),
+            contentView.topAnchor.constraint(equalTo: topAnchor),
+            contentView.bottomAnchor.constraint(equalTo: bottomAnchor),
+            contentView.trailingAnchor.constraint(lessThanOrEqualTo: trailingAnchor),
+            fillWidth
+        ]
+        if let maximumWidth, maximumWidth > 0 {
+            constraints.append(contentView.widthAnchor.constraint(lessThanOrEqualToConstant: maximumWidth))
+        }
+        NSLayoutConstraint.activate(constraints)
+    }
+
+    required init?(coder: NSCoder) {
+        super.init(coder: coder)
+    }
+}
+
+private final class MarkdownNSShrinkWrappedBlockContainer: NSView {
+    init(contentView: NSView, preferredWidth: CGFloat) {
+        super.init(frame: .zero)
+        contentView.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(contentView)
+
+        let preferredWidthConstraint = contentView.widthAnchor.constraint(equalToConstant: preferredWidth)
+        preferredWidthConstraint.priority = .defaultHigh
+
+        NSLayoutConstraint.activate([
+            contentView.leadingAnchor.constraint(equalTo: leadingAnchor),
+            contentView.topAnchor.constraint(equalTo: topAnchor),
+            contentView.bottomAnchor.constraint(equalTo: bottomAnchor),
+            contentView.trailingAnchor.constraint(lessThanOrEqualTo: trailingAnchor),
+            preferredWidthConstraint
+        ])
+    }
+
+    required init?(coder: NSCoder) {
+        super.init(coder: coder)
     }
 }
 #else

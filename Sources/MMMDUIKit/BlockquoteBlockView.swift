@@ -6,9 +6,14 @@ import UIKit
 final class BlockquoteBlockView: UIView {
     init(blocks: [MarkdownBlock], context: RenderContext) {
         super.init(frame: .zero)
+        backgroundColor = .tertiarySystemBackground
+        layer.cornerRadius = 10
+        layer.borderColor = UIColor.separator.cgColor
+        layer.borderWidth = 0.5
+        clipsToBounds = true
 
         let indicator = UIView()
-        indicator.backgroundColor = .separator
+        indicator.backgroundColor = .secondaryLabel
         indicator.translatesAutoresizingMaskIntoConstraints = false
 
         let label = UILabel()
@@ -19,19 +24,20 @@ final class BlockquoteBlockView: UIView {
         label.translatesAutoresizingMaskIntoConstraints = false
         label.isAccessibilityElement = true
         label.accessibilityLabel = label.text
+        label.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
 
         addSubview(indicator)
         addSubview(label)
         NSLayoutConstraint.activate([
-            indicator.leadingAnchor.constraint(equalTo: leadingAnchor),
-            indicator.topAnchor.constraint(equalTo: topAnchor),
-            indicator.bottomAnchor.constraint(equalTo: bottomAnchor),
+            indicator.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 10),
+            indicator.topAnchor.constraint(equalTo: topAnchor, constant: 10),
+            indicator.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -10),
             indicator.widthAnchor.constraint(equalToConstant: 3),
 
             label.leadingAnchor.constraint(equalTo: indicator.trailingAnchor, constant: 10),
-            label.trailingAnchor.constraint(equalTo: trailingAnchor),
-            label.topAnchor.constraint(equalTo: topAnchor),
-            label.bottomAnchor.constraint(equalTo: bottomAnchor)
+            label.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -12),
+            label.topAnchor.constraint(equalTo: topAnchor, constant: 10),
+            label.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -10)
         ])
     }
 

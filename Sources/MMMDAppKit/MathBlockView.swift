@@ -4,19 +4,36 @@ import MMMDMath
 #if canImport(AppKit)
 import AppKit
 
-final class MathBlockView: NSTextField {
+final class MathBlockView: NSView {
+    private let label = NSTextField(labelWithString: "")
+
     init(mathBlock: MathBlock, context: RenderContext) {
         super.init(frame: .zero)
-        isEditable = false
-        isBordered = false
-        drawsBackground = false
-        maximumNumberOfLines = 0
-        alignment = mathBlock.displayMode ? .center : .natural
-        font = .preferredFont(forTextStyle: .body)
-        textColor = .labelColor
-        stringValue = mathBlock.latex
+        wantsLayer = true
+        layer?.backgroundColor = NSColor.controlBackgroundColor.cgColor
+        layer?.cornerRadius = 10
+        layer?.borderColor = NSColor.separatorColor.cgColor
+        layer?.borderWidth = 0.5
         setAccessibilityElement(true)
         setAccessibilityLabel(mathBlock.latex)
+
+        label.isEditable = false
+        label.isBordered = false
+        label.drawsBackground = false
+        label.maximumNumberOfLines = 0
+        label.lineBreakMode = .byWordWrapping
+        label.alignment = mathBlock.displayMode ? .center : .natural
+        label.font = .preferredFont(forTextStyle: .body)
+        label.textColor = .labelColor
+        label.stringValue = mathBlock.latex
+        label.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(label)
+        NSLayoutConstraint.activate([
+            label.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 12),
+            label.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -12),
+            label.topAnchor.constraint(equalTo: topAnchor, constant: 10),
+            label.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -10)
+        ])
         applyMath(mathBlock, context: context)
     }
 
@@ -38,11 +55,11 @@ final class MathBlockView: NSTextField {
             await MainActor.run {
                 switch result.representation {
                 case .plainText(let value), .svg(let value):
-                    stringValue = value
+                    self.label.stringValue = value
                 case .imageData:
-                    stringValue = mathBlock.latex
+                    self.label.stringValue = mathBlock.latex
                 }
-                setAccessibilityLabel(result.accessibilityLabel)
+                self.setAccessibilityLabel(result.accessibilityLabel)
             }
         }
     }

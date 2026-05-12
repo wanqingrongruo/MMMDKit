@@ -19,6 +19,7 @@ final class ParagraphBlockView: UITextView, UITextViewDelegate {
         attributedText = UIKitInlineRenderer.attributedString(from: content, baseFont: .preferredFont(forTextStyle: .body))
         isAccessibilityElement = true
         accessibilityLabel = MarkdownTextExtractor.plainText(from: content)
+        setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
     }
 
     required init?(coder: NSCoder) {

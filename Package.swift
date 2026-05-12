@@ -69,6 +69,14 @@ let package = Package(
         .testTarget(
             name: "MMMDPluginTests",
             dependencies: ["MMMDCore"]
+        ),
+        .testTarget(
+            name: "MMMDAppKitTests",
+            dependencies: ["MMMDAppKit"]
+        ),
+        .testTarget(
+            name: "MMMDUIKitTests",
+            dependencies: ["MMMDUIKit"]
         )
     ]
 )

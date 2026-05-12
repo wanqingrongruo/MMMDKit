@@ -7,8 +7,11 @@ import UIKit
 final class CodeBlockView: UIView {
     init(codeBlock: CodeBlock, context: RenderContext) {
         super.init(frame: .zero)
-        backgroundColor = .secondarySystemBackground
+        backgroundColor = .systemBackground
         layer.cornerRadius = 10
+        layer.borderColor = UIColor.separator.cgColor
+        layer.borderWidth = 0.5
+        clipsToBounds = true
         isAccessibilityElement = false
 
         let stack = UIStackView()
@@ -33,6 +36,14 @@ final class CodeBlockView: UIView {
         textView.text = codeBlock.content
         textView.isAccessibilityElement = true
         textView.accessibilityLabel = "代码块 \(codeBlock.language ?? "") \(codeBlock.content)"
+        textView.layoutMargins = UIEdgeInsets(top: 0, left: context.theme.spacing.codePadding, bottom: 0, right: context.theme.spacing.codePadding)
+        textView.textContainerInset = UIEdgeInsets(
+            top: 0,
+            left: context.theme.spacing.codePadding,
+            bottom: 0,
+            right: context.theme.spacing.codePadding
+        )
+        textView.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         stack.addArrangedSubview(textView)
         applyHighlight(to: textView, codeBlock: codeBlock, context: context)
 
@@ -40,9 +51,9 @@ final class CodeBlockView: UIView {
         let bottom = stack.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -context.theme.spacing.codePadding)
         bottom.priority = .defaultHigh
         NSLayoutConstraint.activate([
-            stack.leadingAnchor.constraint(equalTo: leadingAnchor, constant: context.theme.spacing.codePadding),
-            stack.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -context.theme.spacing.codePadding),
-            stack.topAnchor.constraint(equalTo: topAnchor, constant: context.theme.spacing.codePadding),
+            stack.leadingAnchor.constraint(equalTo: leadingAnchor),
+            stack.trailingAnchor.constraint(equalTo: trailingAnchor),
+            stack.topAnchor.constraint(equalTo: topAnchor),
             bottom
         ])
     }
@@ -71,23 +82,42 @@ final class CodeBlockView: UIView {
         let row = UIStackView()
         row.axis = .horizontal
         row.alignment = .center
+        row.spacing = 14
+        row.backgroundColor = .secondarySystemBackground
+        row.layoutMargins = UIEdgeInsets(top: 0, left: 12, bottom: 0, right: 12)
+        row.isLayoutMarginsRelativeArrangement = true
+        row.heightAnchor.constraint(equalToConstant: 36).isActive = true
 
         let languageLabel = UILabel()
         languageLabel.font = .preferredFont(forTextStyle: .caption1)
         languageLabel.textColor = .secondaryLabel
         languageLabel.text = language ?? "code"
+        languageLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
 
-        let copyButton = UIButton(type: .system)
+        let copyButton = UIButton(type: .custom)
         copyButton.titleLabel?.font = .preferredFont(forTextStyle: .caption1)
-        copyButton.setTitle("复制", for: .normal)
+        let iconConfiguration = UIImage.SymbolConfiguration(pointSize: 16, weight: .regular)
+        copyButton.setImage(UIImage(systemName: "doc.on.doc", withConfiguration: iconConfiguration), for: .normal)
+        copyButton.tintColor = .secondaryLabel
+        copyButton.imageView?.contentMode = .scaleAspectFit
         copyButton.addAction(UIAction { _ in
             UIPasteboard.general.string = CopyPayloadBuilder.payload(for: codeBlock).plainText
             context.actions.onCopyCode?(codeBlock.content, codeBlock.language)
         }, for: .touchUpInside)
 
+        let downloadIcon = UIImageView(image: UIImage(systemName: "arrow.down"))
+        downloadIcon.tintColor = .secondaryLabel
+        downloadIcon.widthAnchor.constraint(equalToConstant: 16).isActive = true
+
+        let expandIcon = UIImageView(image: UIImage(systemName: "arrow.up.left.and.arrow.down.right"))
+        expandIcon.tintColor = .secondaryLabel
+        expandIcon.widthAnchor.constraint(equalToConstant: 16).isActive = true
+
         row.addArrangedSubview(languageLabel)
         row.addArrangedSubview(UIView())
         row.addArrangedSubview(copyButton)
+        row.addArrangedSubview(downloadIcon)
+        row.addArrangedSubview(expandIcon)
         return row
     }
 }

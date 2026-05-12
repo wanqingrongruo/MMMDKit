@@ -2,6 +2,19 @@ import Foundation
 import MMMDCore
 import MMMDParserCmark
 
+struct DemoChatMessage {
+    enum Role: Equatable {
+        case user
+        case assistant
+    }
+
+    let id: String
+    let role: Role
+    let title: String
+    let markdown: String
+    let document: MarkdownDocument
+}
+
 enum DemoMarkdownSamples {
     static let richMarkdown = """
     # MMMDKit 复杂 Markdown 示例
@@ -70,77 +83,204 @@ enum DemoMarkdownSamples {
     }
 
     static let messageSamples: [String] = [
-        "### 消息 01\n今天的习惯任务：**刷牙**、**整理书包**、睡前阅读 10 分钟。",
-        "### 消息 02\n- 起床后喝水\n- 自己穿袜子\n- 出门前检查水杯",
-        "### 消息 03\n> 孩子不配合时，先描述事实，再给两个可选项。",
-        "### 消息 04\n英语启蒙句子：`Can you put the toy in the box?`",
-        "### 消息 05\n| 项目 | 完成 |\n| --- | --- |\n| 刷牙 | 是 |\n| 阅读 | 是 |",
-        "### 消息 06\n数学小游戏：$1 + 2 = 3$，可以用积木演示。",
-        "### 消息 07\n```swift\nlet habit = \"reading\"\nprint(habit)\n```",
-        "### 消息 08\n今天适合做 15 分钟户外观察：树叶、云、影子。",
-        "### 消息 09\n**鼓励话术**：你刚才自己试了一次，这就是进步。",
-        "### 消息 10\n亲子英语：*Brush your teeth, please.*",
-        "### 消息 11\n- 收玩具\n- 洗手\n- 换睡衣\n- 讲故事",
-        "### 消息 12\n> 当孩子说“我不会”，可以回复“我们先试第一步”。",
-        "### 消息 13\n兴趣观察：画画时是否愿意补充细节？",
-        "### 消息 14\n| 英文 | 中文 |\n| --- | --- |\n| apple | 苹果 |\n| banana | 香蕉 |",
-        "### 消息 15\n公式块：\n$$\nE = mc^2\n$$",
-        "### 消息 16\n睡前复盘：今天最开心的一件事是什么？",
-        "### 消息 17\n链接测试：[MMMDKit](https://github.com/wanqingrongruo/MMMDKit)",
-        "### 消息 18\n代码块复制测试：\n```swift\nstruct Reward { let stars: Int }\n```",
-        "### 消息 19\n任务拆分：先穿上衣，再穿裤子，最后穿袜子。",
-        "### 消息 20\n情绪识别：开心、生气、害怕、委屈。",
-        "### 消息 21\n- 红色\n- 蓝色\n- 黄色\n- 绿色",
-        "### 消息 22\n> 分享不是强迫，轮流和等待也同样重要。",
-        "### 消息 23\n今天可以玩“找不同”，训练观察力。",
-        "### 消息 24\n英语问答：`What color is it?` / `It is red.`",
-        "### 消息 25\n| 场景 | 英语 |\n| --- | --- |\n| 洗手 | Wash your hands |\n| 睡觉 | Time for bed |",
-        "### 消息 26\ninline math：$x^2 + y^2 = z^2$。",
-        "### 消息 27\n**规则表达**：玩具用完回家。",
-        "### 消息 28\n运动建议：跳格子、单脚站、拍球。",
-        "### 消息 29\n绘本提问：你觉得小熊为什么难过？",
-        "### 消息 30\n```swift\nlet score = 100\nlet completed = score >= 100\n```",
-        "### 消息 31\n习惯奖励：连续 3 天完成后解锁一次亲子游戏。",
-        "### 消息 32\n> 先连接情绪，再处理行为。",
-        "### 消息 33\n表格长内容测试：\n| 能力 | 说明 |\n| --- | --- |\n| 专注 | 5 分钟拼图 |\n| 表达 | 说出今天的感受 |",
-        "### 消息 34\n睡前英文：*Good night. Sweet dreams.*",
-        "### 消息 35\n兴趣探索：音乐、搭建、运动、科学小实验。",
-        "### 消息 36\n总结：稳定的小步骤，比一次性大目标更容易坚持。"
+        """
+        ### 01
+        MMMDKit 是一个面向 Apple 平台的 **模块化原生 Markdown 渲染框架**。它的核心优势包括：
+        
+        - 🧩 **Parser 可替换**：内置 Cmark 桥接，支持无缝切换。
+        - 🚀 **原生性能**：iOS 使用 UIKit，macOS 使用 AppKit，无 WebView。
+        - 🌊 **AI 流式输出友好**：支持 Token 级别的高频刷新，动画丝滑。
+        
+        [访问 GitHub 仓库](https://github.com/wanqingrongruo/MMMDKit) 了解更多细节。
+        """,
+        """
+        ### 02
+        这太棒了！那么支持哪些具体的 Markdown 格式呢？包含数学公式和代码块吗？
+        """,
+        """
+        ### 03
+        当然支持！你可以使用各种内联格式来突出重点。比如这段文字包含了*斜体*、**粗体**、以及***粗斜体***。如果你需要提及代码，可以使用行内代码 `print("Hello")`。
+        
+        对于代码块，我们提供了基于关键字的高亮，支持扩展：
+        
+        ```swift
+        public struct MarkdownConfiguration {
+            public var theme: MarkdownTheme = .default
+            public var codeHighlighter: CodeHighlighter?
+            
+            public init() {}
+        }
+        ```
+        
+        对于公式，我们支持 inline math $E=mc^2$ 甚至多行的 display math：
+        
+        $$
+        f(x) = \\int_{-\\infty}^\\infty \\hat f(\\xi)\\,e^{2 \\pi i \\xi x} \\,d\\xi
+        $$
+        """,
+        """
+        ### 04
+        表格呢？我需要在消息中对比多项数据。
+        """,
+        """
+        ### 05
+        完全没问题。对于结构化数据的展示，表格是不可或缺的：
+        
+        | 框架特性 | MMMDKit | 其他 Web 方案 | 其他 TextKit 方案 |
+        | --- | --- | --- | --- |
+        | 渲染引擎 | 原生组件 | WebView | TextKit |
+        | 内存占用 | 低 | 高 | 中 |
+        | 流式更新 | ✅ 优秀 | ❌ 差 | ⚠️ 一般 |
+        
+        不仅如此，长表格我们支持了**原生的水平滚动**，告别页面被撑爆的烦恼。
+        """,
+        """
+        ### 06
+        这看起来能满足我开发 AI 助手 App 的全部需求，太感谢了！
+        """,
+        """
+        ### 07
+        不客气！在真实对话中，你还可以自由组合这些元素。
+        
+        > 💡 小贴士：
+        > 
+        > 所有的 Block 都可以通过 `MarkdownConfiguration` 灵活配置或替换！
+        
+        祝您开发顺利！如果遇到问题，请查阅以下兼容表：
+        
+        | 平台 | 最低版本 | 状态 |
+        | --- | --- | --- |
+        | iOS | 15.0 | ✅ Active |
+        | macOS | 12.0 | ✅ Active |
+        """
     ]
 
+    static let chatMessages: [DemoChatMessage] = makeChatMessages()
+
     static let streamingMarkdown = """
-    # 流式输出演示
+    好的！为您生成一份 **5岁孩子习惯养成方案**。该方案结合了游戏化思维和正面管教原则，帮助孩子在快乐中建立良好的生活规律。
 
-    我会像 AI 回复一样逐步输出内容。
+    ### 一、 核心习惯列表
 
-    先给出一个列表：
+    我们先从日常最基础的习惯开始，不要贪多，每次专注 2-3 个核心习惯：
 
-    - 记录孩子每天的习惯完成情况
-    - 根据完成情况生成鼓励话术
-    - 用可视化奖励帮助孩子坚持
+    1. **晨间流程**
+       - ☀️ 独立起床并穿好衣服
+       - 🪥 自己刷牙洗脸
+       - 🥛 喝一杯温水
+    2. **晚间流程**
+       - 🧸 睡前自己收拾玩具回原位
+       - 📚 亲子共读 15 分钟
+       - 🛌 准时熄灯睡觉
 
-    然后输出一段代码：
+    > 💡 **家长小贴士：** 
+    > 5岁孩子的专注力和执行力还在发育中，尽量把指令拆解成具体的动作。例如不说“快点睡觉”，而是说“现在我们去挑一本睡前故事书”。
+
+    ### 二、 积分奖励机制
+
+    为了增加趣味性，我们可以引入“星星积分”。你可以将这段结构映射成家庭积分表：
+
+    | 任务项 | 完成奖励 | 备注 |
+    | :--- | :---: | :--- |
+    | 独立穿衣 | ⭐️ x 1 | 需在 10 分钟内完成 |
+    | 按时刷牙 | ⭐️ x 1 | 早晚各一次 |
+    | 收拾玩具 | ⭐️ x 2 | 保持区域整洁 |
+    | 情绪稳定 | ⭐️ x 2 | 遇到困难不乱发脾气 |
+
+    你可以使用以下简单代码逻辑来计算孩子本周的奖励情况：
 
     ```swift
-    struct HabitProgress {
-        let title: String
-        let completedDays: Int
+    struct ChildHabitTracker {
+        let name: String
+        var totalStars: Int = 0
+        
+        mutating func completeTask(stars: Int) {
+            totalStars += stars
+            print("太棒了！\\(name) 获得了 \\(stars) 颗星星！")
+        }
+        
+        func checkReward() -> String {
+            if totalStars >= 20 {
+                return "解锁周末动物园之旅！🐘"
+            } else if totalStars >= 10 {
+                return "获得一次挑选睡前故事的权利！📖"
+            } else {
+                return "继续加油哦！💪"
+            }
+        }
     }
+
+    var tracker = ChildHabitTracker(name: "宝贝")
+    tracker.completeTask(stars: 2)
     ```
 
-    最后给出一个表格：
+    ### 三、 总结公式
 
-    | 模块 | 价值 |
-    | --- | --- |
-    | 习惯 | 降低家长催促 |
-    | 英语 | 每天轻量陪伴 |
-    | 兴趣 | 先观察再报班 |
+    最后，我们可以用一个“数学公式”来总结习惯养成的秘诀：
+    
+    $$
+    \\text{好习惯} = \\text{清晰指令} + \\text{及时鼓励} + \\text{坚持重复}
+    $$
+    
+    希望这份方案能帮到您！如果有其他需要调整的环节，随时告诉我。
     """
 
     static func makeLongFeedDocument() -> MarkdownDocument {
         let parser = CmarkMarkdownParser()
         let source = messageSamples.joined(separator: "\n\n")
         return (try? parser.parse(source, options: .init())) ?? MarkdownDocument(blocks: [])
+    }
+
+    static func makeChatMessages() -> [DemoChatMessage] {
+        let parser = CmarkMarkdownParser()
+        return messageSamples.enumerated().map { index, markdown in
+            let number = index + 1
+            let lines = markdown.split(separator: "\n", omittingEmptySubsequences: false)
+            let body = lines.dropFirst().joined(separator: "\n")
+            // 偶数消息是 User，奇数消息是 Assistant
+            let role: DemoChatMessage.Role = number.isMultiple(of: 2) ? .user : .assistant
+            let document = (try? parser.parse(body, options: .init())) ?? MarkdownDocument(blocks: [])
+            return DemoChatMessage(
+                id: "message-\(number)",
+                role: role,
+                title: role == .user ? "家长" : "AI 助手",
+                markdown: body,
+                document: document
+            )
+        }
+    }
+
+    static func makeStreamingSeedMessages() -> [DemoChatMessage] {
+        [makeStreamingUserMessage(index: 1)]
+    }
+
+    static func makeStreamingUserMessage(index: Int) -> DemoChatMessage {
+        let parser = CmarkMarkdownParser()
+        let prompts = [
+            "帮我生成一个适合 5 岁孩子的习惯养成方案，包含列表、代码和一个小表格。",
+            "再给我一个睡前流程建议，要求语气温柔，并包含一个检查清单。",
+            "换一个英语启蒙陪伴方案，适合每天 10 分钟执行。",
+            "生成一个亲子户外观察小游戏，包含步骤和奖励建议。"
+        ]
+        let userMarkdown = prompts[(index - 1) % prompts.count]
+        let document = (try? parser.parse(userMarkdown, options: .init())) ?? MarkdownDocument(blocks: [])
+        return DemoChatMessage(
+            id: "streaming-user-\(index)",
+            role: .user,
+            title: "家长 \(String(format: "%02d", index))",
+            markdown: userMarkdown,
+            document: document
+        )
+    }
+
+    static func makeStreamingAssistantPlaceholder(index: Int) -> DemoChatMessage {
+        DemoChatMessage(
+            id: "streaming-assistant-\(index)",
+            role: .assistant,
+            title: "AI 助手 \(String(format: "%02d", index))",
+            markdown: "",
+            document: MarkdownDocument(blocks: [.paragraph(.init(text: "正在输入..."))])
+        )
     }
 
     static func streamingChunks() -> [String] {

@@ -8,8 +8,10 @@ final class CodeBlockView: NSView {
     init(codeBlock: CodeBlock, context: RenderContext) {
         super.init(frame: .zero)
         wantsLayer = true
-        layer?.backgroundColor = NSColor.controlBackgroundColor.cgColor
+        layer?.backgroundColor = NSColor.textBackgroundColor.cgColor
         layer?.cornerRadius = 10
+        layer?.borderColor = NSColor.separatorColor.cgColor
+        layer?.borderWidth = 0.5
         setAccessibilityElement(false)
 
         let stack = NSStackView()
@@ -24,7 +26,7 @@ final class CodeBlockView: NSView {
         textView.isEditable = false
         textView.isSelectable = true
         textView.drawsBackground = false
-        textView.textContainerInset = .zero
+        textView.textContainerInset = NSSize(width: context.theme.spacing.codePadding, height: 0)
         textView.textContainer?.lineFragmentPadding = 0
         textView.font = .monospacedSystemFont(ofSize: NSFont.preferredFont(forTextStyle: .body).pointSize - 1, weight: .regular)
         textView.textColor = .labelColor
@@ -36,9 +38,9 @@ final class CodeBlockView: NSView {
 
         addSubview(stack)
         NSLayoutConstraint.activate([
-            stack.leadingAnchor.constraint(equalTo: leadingAnchor, constant: context.theme.spacing.codePadding),
-            stack.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -context.theme.spacing.codePadding),
-            stack.topAnchor.constraint(equalTo: topAnchor, constant: context.theme.spacing.codePadding),
+            stack.leadingAnchor.constraint(equalTo: leadingAnchor),
+            stack.trailingAnchor.constraint(equalTo: trailingAnchor),
+            stack.topAnchor.constraint(equalTo: topAnchor),
             stack.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -context.theme.spacing.codePadding)
         ])
     }
@@ -64,10 +66,16 @@ final class CodeBlockView: NSView {
     }
 
     private static func toolbar(language: String?, codeBlock: CodeBlock, context: RenderContext) -> NSView {
+        let container = NSView()
+        container.wantsLayer = true
+        container.layer?.backgroundColor = NSColor.controlBackgroundColor.cgColor
+        container.heightAnchor.constraint(equalToConstant: 36).isActive = true
+
         let row = NSStackView()
         row.orientation = .horizontal
         row.alignment = .centerY
-        row.spacing = 8
+        row.spacing = 14
+        row.translatesAutoresizingMaskIntoConstraints = false
 
         let languageLabel = NSTextField(labelWithString: language?.isEmpty == false ? language ?? "code" : "code")
         languageLabel.font = .preferredFont(forTextStyle: .caption1)
@@ -77,16 +85,40 @@ final class CodeBlockView: NSView {
         spacer.setContentHuggingPriority(.defaultLow, for: .horizontal)
         spacer.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
 
-        let copyButton = CodeCopyButton(title: "复制", target: nil, action: nil)
-        copyButton.bezelStyle = .inline
+        let copyButton = CodeCopyButton(title: "", target: nil, action: nil)
+        copyButton.image = NSImage(systemSymbolName: "doc.on.doc", accessibilityDescription: "复制")
+        copyButton.contentTintColor = .secondaryLabelColor
+        copyButton.isBordered = false
+        copyButton.imagePosition = .imageOnly
+        copyButton.imageScaling = .scaleProportionallyDown
         copyButton.copyContext = CodeCopyContext(codeBlock: codeBlock, actions: context.actions)
         copyButton.target = CopyButtonTarget.shared
         copyButton.action = #selector(CopyButtonTarget.copyCode(_:))
 
+        let downloadIcon = NSImageView()
+        downloadIcon.image = NSImage(systemSymbolName: "arrow.down", accessibilityDescription: nil)
+        downloadIcon.contentTintColor = .secondaryLabelColor
+        downloadIcon.widthAnchor.constraint(equalToConstant: 16).isActive = true
+
+        let expandIcon = NSImageView()
+        expandIcon.image = NSImage(systemSymbolName: "arrow.up.left.and.arrow.down.right", accessibilityDescription: nil)
+        expandIcon.contentTintColor = .secondaryLabelColor
+        expandIcon.widthAnchor.constraint(equalToConstant: 16).isActive = true
+
         row.addArrangedSubview(languageLabel)
         row.addArrangedSubview(spacer)
         row.addArrangedSubview(copyButton)
-        return row
+        row.addArrangedSubview(downloadIcon)
+        row.addArrangedSubview(expandIcon)
+
+        container.addSubview(row)
+        NSLayoutConstraint.activate([
+            row.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 12),
+            row.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -12),
+            row.topAnchor.constraint(equalTo: container.topAnchor),
+            row.bottomAnchor.constraint(equalTo: container.bottomAnchor)
+        ])
+        return container
     }
 }
 

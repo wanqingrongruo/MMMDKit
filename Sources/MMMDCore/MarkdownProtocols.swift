@@ -31,6 +31,8 @@ public struct RenderContext: Sendable {
     public var theme: MarkdownTheme
     public var environment: RenderEnvironment
     public var actions: MarkdownActions
+    public var blockRendererRegistry: BlockRendererRegistry
+    public var inlineRendererRegistry: InlineRendererRegistry
     public var codeHighlighter: (any CodeHighlighter)?
     public var mathRenderer: (any MathRenderer)?
     public var imageLoader: (any ImageLoader)?
@@ -40,6 +42,8 @@ public struct RenderContext: Sendable {
         theme: MarkdownTheme = .default,
         environment: RenderEnvironment = .init(),
         actions: MarkdownActions = .init(),
+        blockRendererRegistry: BlockRendererRegistry = .init(),
+        inlineRendererRegistry: InlineRendererRegistry = .init(),
         codeHighlighter: (any CodeHighlighter)? = nil,
         mathRenderer: (any MathRenderer)? = nil,
         imageLoader: (any ImageLoader)? = nil,
@@ -48,6 +52,8 @@ public struct RenderContext: Sendable {
         self.theme = theme
         self.environment = environment
         self.actions = actions
+        self.blockRendererRegistry = blockRendererRegistry
+        self.inlineRendererRegistry = inlineRendererRegistry
         self.codeHighlighter = codeHighlighter
         self.mathRenderer = mathRenderer
         self.imageLoader = imageLoader
@@ -111,6 +117,7 @@ public struct MarkdownConfiguration: Sendable {
     public var plugins: [MarkdownPlugin]
     public var actions: MarkdownActions
     public var blockRendererRegistry: BlockRendererRegistry
+    public var inlineRendererRegistry: InlineRendererRegistry
     public var codeHighlighter: (any CodeHighlighter)?
     public var mathRenderer: (any MathRenderer)?
     public var imageLoader: (any ImageLoader)?
@@ -121,6 +128,7 @@ public struct MarkdownConfiguration: Sendable {
         plugins: [MarkdownPlugin] = [],
         actions: MarkdownActions = .init(),
         blockRendererRegistry: BlockRendererRegistry = .init(),
+        inlineRendererRegistry: InlineRendererRegistry = .init(),
         codeHighlighter: (any CodeHighlighter)? = nil,
         mathRenderer: (any MathRenderer)? = nil,
         imageLoader: (any ImageLoader)? = nil,
@@ -130,10 +138,18 @@ public struct MarkdownConfiguration: Sendable {
         self.plugins = plugins
         self.actions = actions
         self.blockRendererRegistry = blockRendererRegistry
+        self.inlineRendererRegistry = inlineRendererRegistry
         self.codeHighlighter = codeHighlighter
         self.mathRenderer = mathRenderer
         self.imageLoader = imageLoader
         self.codeBlockMaximumWidth = codeBlockMaximumWidth
+    }
+
+    public func transformedDocument(_ document: MarkdownDocument) throws -> MarkdownDocument {
+        let context = PluginContext(configuration: self)
+        return try plugins.reduce(document) { current, plugin in
+            try plugin.transform(document: current, context: context)
+        }
     }
 }
 
@@ -149,6 +165,22 @@ public struct BlockRendererRegistry: Sendable {
     }
 
     public func rendererName(for kind: MarkdownBlockKind) -> String? {
+        rendererNames[kind]
+    }
+}
+
+public struct InlineRendererRegistry: Sendable {
+    private var rendererNames: [InlineNodeKind: String]
+
+    public init(rendererNames: [InlineNodeKind: String] = [:]) {
+        self.rendererNames = rendererNames
+    }
+
+    public mutating func register(kind: InlineNodeKind, rendererName: String) {
+        rendererNames[kind] = rendererName
+    }
+
+    public func rendererName(for kind: InlineNodeKind) -> String? {
         rendererNames[kind]
     }
 }

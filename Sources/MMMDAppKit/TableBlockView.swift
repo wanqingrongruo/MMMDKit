@@ -3,22 +3,38 @@ import MMMDCore
 #if canImport(AppKit)
 import AppKit
 
-final class TableBlockView: NSScrollView {
+final class TableBlockView: NSView {
+    private static let toolbarHeight: CGFloat = 36
     private static let minimumCellWidth: CGFloat = 120
     private static let minimumRowHeight: CGFloat = 34
     private static let cellTextInset: CGFloat = 8
     private static let horizontalScrollerHeight: CGFloat = 14
+    let preferredContentWidth: CGFloat
 
     init(table: TableBlock, context: RenderContext) {
-        super.init(frame: .zero)
-        hasHorizontalScroller = true
-        hasVerticalScroller = false
-        drawsBackground = false
-        borderType = .noBorder
-        autohidesScrollers = true
-
         let rows = Self.normalizedRows(for: table)
         let columnCount = max(rows.map(\.cells.count).max() ?? 0, 1)
+        preferredContentWidth = CGFloat(columnCount) * Self.minimumCellWidth
+        super.init(frame: .zero)
+        wantsLayer = true
+        layer?.backgroundColor = NSColor.textBackgroundColor.cgColor
+        layer?.cornerRadius = 10
+        layer?.borderColor = NSColor.separatorColor.cgColor
+        layer?.borderWidth = 0.5
+
+        let toolbar = Self.toolbar(title: "表格")
+        toolbar.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(toolbar)
+
+        let scrollView = NSScrollView()
+        scrollView.hasHorizontalScroller = true
+        scrollView.hasVerticalScroller = false
+        scrollView.drawsBackground = false
+        scrollView.borderType = .noBorder
+        scrollView.autohidesScrollers = true
+        scrollView.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(scrollView)
+
         let rowHeights = rows.map { Self.rowHeight(cells: $0.cells, isHeader: $0.isHeader) }
         let tableWidth = CGFloat(columnCount) * Self.minimumCellWidth
         let tableHeight = rowHeights.reduce(0, +)
@@ -41,19 +57,31 @@ final class TableBlockView: NSScrollView {
             y += rowHeight
         }
 
-        documentView = contentView
+        scrollView.documentView = contentView
+        NSLayoutConstraint.activate([
+            toolbar.leadingAnchor.constraint(equalTo: leadingAnchor),
+            toolbar.trailingAnchor.constraint(equalTo: trailingAnchor),
+            toolbar.topAnchor.constraint(equalTo: topAnchor),
+            toolbar.heightAnchor.constraint(equalToConstant: Self.toolbarHeight),
+
+            scrollView.leadingAnchor.constraint(equalTo: leadingAnchor),
+            scrollView.trailingAnchor.constraint(equalTo: trailingAnchor),
+            scrollView.topAnchor.constraint(equalTo: toolbar.bottomAnchor),
+            scrollView.bottomAnchor.constraint(equalTo: bottomAnchor)
+        ])
         setAccessibilityElement(true)
         setAccessibilityLabel("表格，\(table.header.count) 列，\(table.rows.count) 行")
     }
 
     required init?(coder: NSCoder) {
+        preferredContentWidth = Self.minimumCellWidth
         super.init(coder: coder)
     }
 
     static func height(for table: TableBlock) -> CGFloat {
         let rows = normalizedRows(for: table)
         let contentHeight = rows.map { rowHeight(cells: $0.cells, isHeader: $0.isHeader) }.reduce(0, +)
-        return max(minimumRowHeight, contentHeight) + horizontalScrollerHeight
+        return toolbarHeight + max(minimumRowHeight, contentHeight) + horizontalScrollerHeight
     }
 
     private static func normalizedRows(for table: TableBlock) -> [(cells: [InlineContent], isHeader: Bool)] {
@@ -83,7 +111,7 @@ final class TableBlockView: NSScrollView {
     private static func cellView(content: InlineContent, isHeader: Bool) -> NSView {
         let cellView = NSView(frame: .zero)
         cellView.wantsLayer = true
-        cellView.layer?.backgroundColor = (isHeader ? NSColor.controlBackgroundColor : .clear).cgColor
+        cellView.layer?.backgroundColor = (isHeader ? NSColor.controlBackgroundColor : NSColor.textBackgroundColor).cgColor
         cellView.layer?.borderColor = NSColor.separatorColor.cgColor
         cellView.layer?.borderWidth = 0.5
 
@@ -105,6 +133,41 @@ final class TableBlockView: NSScrollView {
         ])
 
         return cellView
+    }
+
+    private static func toolbar(title: String) -> NSView {
+        let container = NSView()
+        container.wantsLayer = true
+        container.layer?.backgroundColor = NSColor.controlBackgroundColor.cgColor
+
+        let label = NSTextField(labelWithString: title)
+        label.font = .preferredFont(forTextStyle: .caption1)
+        label.textColor = .secondaryLabelColor
+        label.translatesAutoresizingMaskIntoConstraints = false
+
+        let actions = NSStackView()
+        actions.orientation = .horizontal
+        actions.alignment = .centerY
+        actions.spacing = 14
+        actions.translatesAutoresizingMaskIntoConstraints = false
+        for symbol in ["doc.on.doc", "arrow.down", "arrow.up.left.and.arrow.down.right"] {
+            let imageView = NSImageView()
+            imageView.image = NSImage(systemSymbolName: symbol, accessibilityDescription: nil)
+            imageView.contentTintColor = .secondaryLabelColor
+            imageView.translatesAutoresizingMaskIntoConstraints = false
+            imageView.widthAnchor.constraint(equalToConstant: 16).isActive = true
+            actions.addArrangedSubview(imageView)
+        }
+
+        container.addSubview(label)
+        container.addSubview(actions)
+        NSLayoutConstraint.activate([
+            label.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 12),
+            label.centerYAnchor.constraint(equalTo: container.centerYAnchor),
+            actions.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -12),
+            actions.centerYAnchor.constraint(equalTo: container.centerYAnchor)
+        ])
+        return container
     }
 }
 
