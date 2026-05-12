@@ -102,8 +102,11 @@ final class DemoMarkdownViewController: UIViewController {
                 onLinkTap: { url in
                     UIApplication.shared.open(url)
                 },
-                onCopyCode: { _, _ in
-                    print("已复制代码块")
+                onCopyCode: { [weak self] _, _ in
+                    self?.showToast(message: "已复制代码块")
+                },
+                onCopyTable: { [weak self] _ in
+                    self?.showToast(message: "已复制表格")
                 }
             ),
             codeHighlighter: KeywordCodeHighlighter(),
@@ -137,6 +140,33 @@ final class DemoMarkdownViewController: UIViewController {
         transcriptCollectionView.register(ChatMessageCell.self, forCellWithReuseIdentifier: ChatMessageCell.reuseIdentifier)
         transcriptCollectionView.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(transcriptCollectionView)
+    }
+
+    private func showToast(message: String) {
+        let toastLabel = UILabel()
+        toastLabel.text = message
+        toastLabel.font = .systemFont(ofSize: 14)
+        toastLabel.textColor = .white
+        toastLabel.backgroundColor = UIColor.black.withAlphaComponent(0.7)
+        toastLabel.textAlignment = .center
+        toastLabel.layer.cornerRadius = 8
+        toastLabel.clipsToBounds = true
+        toastLabel.translatesAutoresizingMaskIntoConstraints = false
+        
+        view.addSubview(toastLabel)
+        
+        NSLayoutConstraint.activate([
+            toastLabel.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            toastLabel.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -40),
+            toastLabel.widthAnchor.constraint(greaterThanOrEqualToConstant: 100),
+            toastLabel.heightAnchor.constraint(greaterThanOrEqualToConstant: 36)
+        ])
+        
+        UIView.animate(withDuration: 0.3, delay: 1.5, options: .curveEaseOut, animations: {
+            toastLabel.alpha = 0.0
+        }, completion: { _ in
+            toastLabel.removeFromSuperview()
+        })
     }
 
     private func showChatFeed() {
