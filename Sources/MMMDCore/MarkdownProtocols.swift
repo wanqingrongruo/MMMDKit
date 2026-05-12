@@ -149,19 +149,15 @@ public struct ToolbarOptions: Equatable, Sendable {
     public var showsDownload: Bool
     /// 是否展示“放大/全屏”按钮，默认为 false
     public var showsExpand: Bool
-    /// 代码块等组件的标题栏是否支持滚动时顶部悬停，默认为 true
-    public var isStickyHeaderEnabled: Bool
 
     public init(
         showsCopy: Bool = true,
         showsDownload: Bool = false,
-        showsExpand: Bool = false,
-        isStickyHeaderEnabled: Bool = true
+        showsExpand: Bool = false
     ) {
         self.showsCopy = showsCopy
         self.showsDownload = showsDownload
         self.showsExpand = showsExpand
-        self.isStickyHeaderEnabled = isStickyHeaderEnabled
     }
 }
 

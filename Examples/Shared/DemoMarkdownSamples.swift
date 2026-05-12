@@ -65,53 +65,6 @@ enum DemoMarkdownSamples {
         func isCompleted() -> Bool {
             score >= 100
         }
-        
-        func printHabit() {
-            print("Habit: \\(title)")
-        }
-        
-        func progress() -> Double {
-            return Double(score) / 100.0
-        }
-        
-        func isStarted() -> Bool {
-            return score > 0
-        }
-        
-        func isAlmostDone() -> Bool {
-            return score >= 90
-        }
-        
-        func remainingScore() -> Int {
-            return max(0, 100 - score)
-        }
-        
-        func category() -> String {
-            if title.contains("Sleep") {
-                return "Rest"
-            } else if title.contains("Eat") {
-                return "Nutrition"
-            } else {
-                return "General"
-            }
-        }
-        
-        func estimatedDaysLeft(scorePerDay: Int) -> Int {
-            guard scorePerDay > 0 else { return 999 }
-            return Int(ceil(Double(remainingScore()) / Double(scorePerDay)))
-        }
-        
-        func describe() -> String {
-            return "\\(title) - \\(score) points"
-        }
-        
-        func meetsThreshold(threshold: Int) -> Bool {
-            return score >= threshold
-        }
-        
-        func toJSON() -> String {
-            return "{\"title\": \"\\(title)\", \"score\": \\(score)}"
-        }
     }
     ```
     """
@@ -255,78 +208,10 @@ enum DemoMarkdownSamples {
                 return "继续加油哦！💪"
             }
         }
-        
-        func calculateWeeklyStats() -> Int {
-            return totalStars * 7
-        }
-        
-        mutating func reset() {
-            totalStars = 0
-        }
-        
-        func printStatus() {
-            print("当前状态: \\(name) 有 \\(totalStars) 颗星星。")
-        }
-        
-        func canUnlockSpecialBadge() -> Bool {
-            return totalStars > 50
-        }
-        
-        mutating func addBonus() {
-            totalStars += 5
-        }
-        
-        func generateReport() -> String {
-            return "报告：\\(name) 表现良好！"
-        }
-        
-        mutating func deductPenalty() {
-            if totalStars > 0 {
-                totalStars -= 1
-            }
-        }
-        
-        func getProgressPercentage() -> Double {
-            return min(100.0, Double(totalStars) / 20.0 * 100.0)
-        }
-        
-        func isReadyForNextLevel() -> Bool {
-            return totalStars >= 100
-        }
-        
-        mutating func upgradeLevel() {
-            if isReadyForNextLevel() {
-                totalStars -= 100
-                print("升级！")
-            }
-        }
-        
-        func suggestActivity() -> String {
-            return "建议去公园玩耍"
-        }
-        
-        mutating func quickReward() {
-            totalStars += 1
-        }
-        
-        func estimatedDaysToGoal() -> Int {
-            return max(0, 20 - totalStars)
-        }
-        
-        func shareProgress() {
-            print("分享到朋友圈: \\(name) 棒极了！")
-        }
-        
-        mutating func syncWithCloud() {
-            print("数据已同步。")
-        }
     }
 
     var tracker = ChildHabitTracker(name: "宝贝")
     tracker.completeTask(stars: 2)
-    tracker.printStatus()
-    tracker.addBonus()
-    tracker.syncWithCloud()
     ```
 
     ### 三、 总结公式

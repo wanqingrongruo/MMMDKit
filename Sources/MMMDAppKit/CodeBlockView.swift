@@ -5,19 +5,13 @@ import MMMDHighlighter
 import AppKit
 
 final class CodeBlockView: NSView {
-    private var toolbarView: NSView?
-    private var boundsObserver: NSObjectProtocol?
-    private let context: RenderContext
-
     init(codeBlock: CodeBlock, context: RenderContext) {
-        self.context = context
         super.init(frame: .zero)
         wantsLayer = true
         layer?.backgroundColor = NSColor.textBackgroundColor.cgColor
         layer?.cornerRadius = 10
         layer?.borderColor = NSColor.separatorColor.cgColor
         layer?.borderWidth = 0.5
-        layer?.masksToBounds = true
         setAccessibilityElement(false)
 
         let stack = NSStackView()
@@ -26,11 +20,7 @@ final class CodeBlockView: NSView {
         stack.spacing = 8
         stack.translatesAutoresizingMaskIntoConstraints = false
 
-        let toolbar = Self.toolbar(language: codeBlock.language, codeBlock: codeBlock, context: context)
-        self.toolbarView = toolbar
-        toolbar.wantsLayer = true
-        toolbar.layer?.zPosition = 1
-        stack.addArrangedSubview(toolbar)
+        stack.addArrangedSubview(Self.toolbar(language: codeBlock.language, codeBlock: codeBlock, context: context))
 
         let textView = NSTextView()
         textView.isEditable = false
@@ -72,71 +62,7 @@ final class CodeBlockView: NSView {
     }
 
     required init?(coder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
-    }
-
-    override func viewDidMoveToWindow() {
-        super.viewDidMoveToWindow()
-        if window != nil {
-            setupScrollObservation()
-        } else {
-            if let observer = boundsObserver {
-                NotificationCenter.default.removeObserver(observer)
-                boundsObserver = nil
-            }
-        }
-    }
-
-    private func setupScrollObservation() {
-        guard context.toolbarOptions.isStickyHeaderEnabled else { return }
-
-        var responder: NSResponder? = self.nextResponder
-        var scrollView: NSScrollView?
-        while let current = responder {
-            if let sc = current as? NSScrollView {
-                scrollView = sc
-                break
-            }
-            responder = current.nextResponder
-        }
-        guard let scrollView = scrollView else { return }
-
-        scrollView.contentView.postsBoundsChangedNotifications = true
-        boundsObserver = NotificationCenter.default.addObserver(
-            forName: NSView.boundsDidChangeNotification,
-            object: scrollView.contentView,
-            queue: .main
-        ) { [weak self, weak scrollView] _ in
-            guard let self = self, let scrollView = scrollView else { return }
-            self.updateStickyHeader(in: scrollView)
-        }
-        updateStickyHeader(in: scrollView)
-    }
-
-    private func updateStickyHeader(in scrollView: NSScrollView) {
-        guard let toolbar = toolbarView else { return }
-        
-        let rectInScroll = self.convert(self.bounds, to: scrollView.contentView)
-        let visibleRect = scrollView.documentVisibleRect
-        
-        let isFlipped = scrollView.contentView.isFlipped
-        if isFlipped {
-            if visibleRect.minY > rectInScroll.minY {
-                let offset = visibleRect.minY - rectInScroll.minY
-                let maxOffset = max(0, self.bounds.height - toolbar.bounds.height)
-                toolbar.layer?.transform = CATransform3DMakeTranslation(0, min(maxOffset, offset), 0)
-            } else {
-                toolbar.layer?.transform = CATransform3DIdentity
-            }
-        } else {
-            if visibleRect.maxY < rectInScroll.maxY {
-                let offset = rectInScroll.maxY - visibleRect.maxY
-                let maxOffset = max(0, self.bounds.height - toolbar.bounds.height)
-                toolbar.layer?.transform = CATransform3DMakeTranslation(0, -min(maxOffset, offset), 0)
-            } else {
-                toolbar.layer?.transform = CATransform3DIdentity
-            }
-        }
+        super.init(coder: coder)
     }
 
     private static func toolbar(language: String?, codeBlock: CodeBlock, context: RenderContext) -> NSView {

@@ -5,12 +5,7 @@ import MMMDHighlighter
 import UIKit
 
 final class CodeBlockView: UIView {
-    private var toolbarView: UIView?
-    private var scrollObservation: NSKeyValueObservation?
-    private let context: RenderContext
-
     init(codeBlock: CodeBlock, context: RenderContext) {
-        self.context = context
         super.init(frame: .zero)
         backgroundColor = UIColor { traitCollection in
             traitCollection.userInterfaceStyle == .dark ? UIColor(white: 0.1, alpha: 1.0) : UIColor(red: 0.98, green: 0.98, blue: 0.99, alpha: 1.0)
@@ -27,16 +22,10 @@ final class CodeBlockView: UIView {
         stack.translatesAutoresizingMaskIntoConstraints = false
 
         if let language = codeBlock.language, !language.isEmpty {
-            let toolbar = Self.toolbar(language: language, codeBlock: codeBlock, context: context)
-            self.toolbarView = toolbar
-            stack.addArrangedSubview(toolbar)
+            stack.addArrangedSubview(Self.toolbar(language: language, codeBlock: codeBlock, context: context))
         } else {
-            let toolbar = Self.toolbar(language: nil, codeBlock: codeBlock, context: context)
-            self.toolbarView = toolbar
-            stack.addArrangedSubview(toolbar)
+            stack.addArrangedSubview(Self.toolbar(language: nil, codeBlock: codeBlock, context: context))
         }
-        
-        toolbarView?.layer.zPosition = 1
 
         let textView = UITextView()
         textView.backgroundColor = .clear
@@ -88,53 +77,7 @@ final class CodeBlockView: UIView {
     }
 
     required init?(coder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
-    }
-
-    override func didMoveToWindow() {
-        super.didMoveToWindow()
-        if window != nil {
-            setupScrollObservation()
-        } else {
-            scrollObservation?.invalidate()
-            scrollObservation = nil
-        }
-    }
-    
-    private func setupScrollObservation() {
-        guard context.toolbarOptions.isStickyHeaderEnabled else { return }
-        
-        var responder: UIResponder? = self.next
-        var scrollView: UIScrollView?
-        while let current = responder {
-            if let sc = current as? UIScrollView {
-                scrollView = sc
-                break
-            }
-            responder = current.next
-        }
-        guard let scrollView = scrollView else { return }
-        
-        scrollObservation = scrollView.observe(\.contentOffset, options: [.initial, .new]) { [weak self, weak scrollView] _, _ in
-            guard let self = self, let scrollView = scrollView else { return }
-            self.updateStickyHeader(in: scrollView)
-        }
-    }
-    
-    private func updateStickyHeader(in scrollView: UIScrollView) {
-        guard let toolbar = toolbarView else { return }
-        
-        let rectInScroll = self.convert(self.bounds, to: scrollView)
-        let visibleTop = scrollView.contentOffset.y + scrollView.adjustedContentInset.top
-        
-        if visibleTop > rectInScroll.minY {
-            let offset = visibleTop - rectInScroll.minY
-            let maxOffset = max(0, self.bounds.height - toolbar.bounds.height)
-            let translationY = min(maxOffset, offset)
-            toolbar.transform = CGAffineTransform(translationX: 0, y: translationY)
-        } else {
-            toolbar.transform = .identity
-        }
+        super.init(coder: coder)
     }
 
     private static func toolbar(language: String?, codeBlock: CodeBlock, context: RenderContext) -> UIView {
