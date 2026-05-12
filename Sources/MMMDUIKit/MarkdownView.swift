@@ -99,6 +99,7 @@ open class MarkdownView: UIView {
         let context = RenderContext(
             theme: configuration.theme,
             actions: configuration.actions,
+            toolbarOptions: configuration.toolbarOptions,
             blockRendererRegistry: configuration.blockRendererRegistry,
             inlineRendererRegistry: configuration.inlineRendererRegistry,
             codeHighlighter: configuration.codeHighlighter,

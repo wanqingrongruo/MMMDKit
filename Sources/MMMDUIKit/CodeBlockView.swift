@@ -109,19 +109,35 @@ final class CodeBlockView: UIView {
             context.actions.onCopyCode?(codeBlock.content, codeBlock.language)
         }, for: .touchUpInside)
 
-        let downloadIcon = UIImageView(image: UIImage(systemName: "arrow.down"))
-        downloadIcon.tintColor = .secondaryLabel
-        downloadIcon.widthAnchor.constraint(equalToConstant: 16).isActive = true
+        let downloadButton = UIButton(type: .custom)
+        downloadButton.setImage(UIImage(systemName: "arrow.down", withConfiguration: iconConfiguration), for: .normal)
+        downloadButton.tintColor = .secondaryLabel
+        downloadButton.imageView?.contentMode = .scaleAspectFit
+        downloadButton.addAction(UIAction { _ in
+            context.actions.onDownloadCode?(codeBlock.content, codeBlock.language)
+        }, for: .touchUpInside)
 
-        let expandIcon = UIImageView(image: UIImage(systemName: "arrow.up.left.and.arrow.down.right"))
-        expandIcon.tintColor = .secondaryLabel
-        expandIcon.widthAnchor.constraint(equalToConstant: 16).isActive = true
+        let expandButton = UIButton(type: .custom)
+        expandButton.setImage(UIImage(systemName: "arrow.down.left.and.arrow.up.right", withConfiguration: iconConfiguration), for: .normal)
+        expandButton.tintColor = .secondaryLabel
+        expandButton.imageView?.contentMode = .scaleAspectFit
+        expandButton.addAction(UIAction { _ in
+            context.actions.onExpandCode?(codeBlock.content, codeBlock.language)
+        }, for: .touchUpInside)
 
         row.addArrangedSubview(languageLabel)
         row.addArrangedSubview(UIView())
-        row.addArrangedSubview(copyButton)
-        row.addArrangedSubview(downloadIcon)
-        row.addArrangedSubview(expandIcon)
+        
+        let options = context.toolbarOptions
+        if options.showsCopy {
+            row.addArrangedSubview(copyButton)
+        }
+        if options.showsDownload {
+            row.addArrangedSubview(downloadButton)
+        }
+        if options.showsExpand {
+            row.addArrangedSubview(expandButton)
+        }
         return row
     }
 }

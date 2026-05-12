@@ -22,7 +22,7 @@ final class TableBlockView: NSView {
         layer?.borderColor = NSColor.separatorColor.cgColor
         layer?.borderWidth = 0.5
 
-        let toolbar = Self.toolbar(title: "表格")
+        let toolbar = Self.toolbar(title: "表格", table: table, context: context)
         toolbar.translatesAutoresizingMaskIntoConstraints = false
         addSubview(toolbar)
 
@@ -111,7 +111,7 @@ final class TableBlockView: NSView {
     private static func cellView(content: InlineContent, isHeader: Bool) -> NSView {
         let cellView = NSView(frame: .zero)
         cellView.wantsLayer = true
-        cellView.layer?.backgroundColor = (isHeader ? NSColor.controlBackgroundColor : NSColor.textBackgroundColor).cgColor
+        cellView.layer?.backgroundColor = NSColor.clear.cgColor
         cellView.layer?.borderColor = NSColor.separatorColor.cgColor
         cellView.layer?.borderWidth = 0.5
 
@@ -135,7 +135,7 @@ final class TableBlockView: NSView {
         return cellView
     }
 
-    private static func toolbar(title: String) -> NSView {
+    private static func toolbar(title: String, table: TableBlock, context: RenderContext) -> NSView {
         let container = NSView()
         container.wantsLayer = true
         container.layer?.backgroundColor = NSColor.controlBackgroundColor.cgColor
@@ -150,13 +150,48 @@ final class TableBlockView: NSView {
         actions.alignment = .centerY
         actions.spacing = 14
         actions.translatesAutoresizingMaskIntoConstraints = false
-        for symbol in ["doc.on.doc", "arrow.down", "arrow.up.left.and.arrow.down.right"] {
-            let imageView = NSImageView()
-            imageView.image = NSImage(systemSymbolName: symbol, accessibilityDescription: nil)
-            imageView.contentTintColor = .secondaryLabelColor
-            imageView.translatesAutoresizingMaskIntoConstraints = false
-            imageView.widthAnchor.constraint(equalToConstant: 16).isActive = true
-            actions.addArrangedSubview(imageView)
+        
+        let copyButton = TableActionButton(title: "", target: nil, action: nil)
+        copyButton.image = NSImage(systemSymbolName: "doc.on.doc", accessibilityDescription: "复制")
+        copyButton.contentTintColor = .secondaryLabelColor
+        copyButton.isBordered = false
+        copyButton.imagePosition = .imageOnly
+        copyButton.imageScaling = .scaleProportionallyDown
+        copyButton.actionContext = TableActionContext(table: table, actions: context.actions)
+        copyButton.target = TableActionButtonTarget.shared
+        copyButton.action = #selector(TableActionButtonTarget.copyTable(_:))
+        
+        let downloadButton = TableActionButton(title: "", target: nil, action: nil)
+        downloadButton.image = NSImage(systemSymbolName: "arrow.down", accessibilityDescription: "下载")
+        downloadButton.contentTintColor = .secondaryLabelColor
+        downloadButton.isBordered = false
+        downloadButton.imagePosition = .imageOnly
+        downloadButton.imageScaling = .scaleProportionallyDown
+        downloadButton.actionContext = TableActionContext(table: table, actions: context.actions)
+        downloadButton.target = TableActionButtonTarget.shared
+        downloadButton.action = #selector(TableActionButtonTarget.downloadTable(_:))
+        downloadButton.widthAnchor.constraint(equalToConstant: 16).isActive = true
+        
+        let expandButton = TableActionButton(title: "", target: nil, action: nil)
+        expandButton.image = NSImage(systemSymbolName: "arrow.down.left.and.arrow.up.right", accessibilityDescription: "全屏")
+        expandButton.contentTintColor = .secondaryLabelColor
+        expandButton.isBordered = false
+        expandButton.imagePosition = .imageOnly
+        expandButton.imageScaling = .scaleProportionallyDown
+        expandButton.actionContext = TableActionContext(table: table, actions: context.actions)
+        expandButton.target = TableActionButtonTarget.shared
+        expandButton.action = #selector(TableActionButtonTarget.expandTable(_:))
+        expandButton.widthAnchor.constraint(equalToConstant: 16).isActive = true
+
+        let options = context.toolbarOptions
+        if options.showsCopy {
+            actions.addArrangedSubview(copyButton)
+        }
+        if options.showsDownload {
+            actions.addArrangedSubview(downloadButton)
+        }
+        if options.showsExpand {
+            actions.addArrangedSubview(expandButton)
         }
 
         container.addSubview(label)
@@ -168,6 +203,50 @@ final class TableBlockView: NSView {
             actions.centerYAnchor.constraint(equalTo: container.centerYAnchor)
         ])
         return container
+    }
+}
+
+private final class TableActionContext: NSObject {
+    let table: TableBlock
+    let actions: MarkdownActions
+
+    init(table: TableBlock, actions: MarkdownActions) {
+        self.table = table
+        self.actions = actions
+    }
+}
+
+private final class TableActionButton: NSButton {
+    var actionContext: TableActionContext?
+}
+
+private final class TableActionButtonTarget: NSObject {
+    static let shared = TableActionButtonTarget()
+
+    @objc func copyTable(_ sender: NSButton) {
+        guard let context = (sender as? TableActionButton)?.actionContext else {
+            return
+        }
+        let text = MarkdownTextExtractor.plainText(from: .table(context.table))
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(text, forType: .string)
+        context.actions.onCopyTable?(text)
+    }
+
+    @objc func downloadTable(_ sender: NSButton) {
+        guard let context = (sender as? TableActionButton)?.actionContext else {
+            return
+        }
+        let text = MarkdownTextExtractor.plainText(from: .table(context.table))
+        context.actions.onDownloadTable?(text)
+    }
+
+    @objc func expandTable(_ sender: NSButton) {
+        guard let context = (sender as? TableActionButton)?.actionContext else {
+            return
+        }
+        let text = MarkdownTextExtractor.plainText(from: .table(context.table))
+        context.actions.onExpandTable?(text)
     }
 }
 

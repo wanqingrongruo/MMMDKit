@@ -85,31 +85,51 @@ final class CodeBlockView: NSView {
         spacer.setContentHuggingPriority(.defaultLow, for: .horizontal)
         spacer.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
 
-        let copyButton = CodeCopyButton(title: "", target: nil, action: nil)
+        let copyButton = CodeActionButton(title: "", target: nil, action: nil)
         copyButton.image = NSImage(systemSymbolName: "doc.on.doc", accessibilityDescription: "复制")
         copyButton.contentTintColor = .secondaryLabelColor
         copyButton.isBordered = false
         copyButton.imagePosition = .imageOnly
         copyButton.imageScaling = .scaleProportionallyDown
-        copyButton.copyContext = CodeCopyContext(codeBlock: codeBlock, actions: context.actions)
-        copyButton.target = CopyButtonTarget.shared
-        copyButton.action = #selector(CopyButtonTarget.copyCode(_:))
+        copyButton.actionContext = CodeActionContext(codeBlock: codeBlock, actions: context.actions)
+        copyButton.target = ActionButtonTarget.shared
+        copyButton.action = #selector(ActionButtonTarget.copyCode(_:))
 
-        let downloadIcon = NSImageView()
-        downloadIcon.image = NSImage(systemSymbolName: "arrow.down", accessibilityDescription: nil)
-        downloadIcon.contentTintColor = .secondaryLabelColor
-        downloadIcon.widthAnchor.constraint(equalToConstant: 16).isActive = true
+        let downloadButton = CodeActionButton(title: "", target: nil, action: nil)
+        downloadButton.image = NSImage(systemSymbolName: "arrow.down", accessibilityDescription: "下载")
+        downloadButton.contentTintColor = .secondaryLabelColor
+        downloadButton.isBordered = false
+        downloadButton.imagePosition = .imageOnly
+        downloadButton.imageScaling = .scaleProportionallyDown
+        downloadButton.actionContext = CodeActionContext(codeBlock: codeBlock, actions: context.actions)
+        downloadButton.target = ActionButtonTarget.shared
+        downloadButton.action = #selector(ActionButtonTarget.downloadCode(_:))
+        downloadButton.widthAnchor.constraint(equalToConstant: 16).isActive = true
 
-        let expandIcon = NSImageView()
-        expandIcon.image = NSImage(systemSymbolName: "arrow.up.left.and.arrow.down.right", accessibilityDescription: nil)
-        expandIcon.contentTintColor = .secondaryLabelColor
-        expandIcon.widthAnchor.constraint(equalToConstant: 16).isActive = true
+        let expandButton = CodeActionButton(title: "", target: nil, action: nil)
+        expandButton.image = NSImage(systemSymbolName: "arrow.down.left.and.arrow.up.right", accessibilityDescription: "全屏")
+        expandButton.contentTintColor = .secondaryLabelColor
+        expandButton.isBordered = false
+        expandButton.imagePosition = .imageOnly
+        expandButton.imageScaling = .scaleProportionallyDown
+        expandButton.actionContext = CodeActionContext(codeBlock: codeBlock, actions: context.actions)
+        expandButton.target = ActionButtonTarget.shared
+        expandButton.action = #selector(ActionButtonTarget.expandCode(_:))
+        expandButton.widthAnchor.constraint(equalToConstant: 16).isActive = true
 
         row.addArrangedSubview(languageLabel)
         row.addArrangedSubview(spacer)
-        row.addArrangedSubview(copyButton)
-        row.addArrangedSubview(downloadIcon)
-        row.addArrangedSubview(expandIcon)
+        
+        let options = context.toolbarOptions
+        if options.showsCopy {
+            row.addArrangedSubview(copyButton)
+        }
+        if options.showsDownload {
+            row.addArrangedSubview(downloadButton)
+        }
+        if options.showsExpand {
+            row.addArrangedSubview(expandButton)
+        }
 
         container.addSubview(row)
         NSLayoutConstraint.activate([
@@ -122,7 +142,7 @@ final class CodeBlockView: NSView {
     }
 }
 
-private final class CodeCopyContext: NSObject {
+private final class CodeActionContext: NSObject {
     let codeBlock: CodeBlock
     let actions: MarkdownActions
 
@@ -132,20 +152,34 @@ private final class CodeCopyContext: NSObject {
     }
 }
 
-private final class CodeCopyButton: NSButton {
-    var copyContext: CodeCopyContext?
+private final class CodeActionButton: NSButton {
+    var actionContext: CodeActionContext?
 }
 
-private final class CopyButtonTarget: NSObject {
-    static let shared = CopyButtonTarget()
+private final class ActionButtonTarget: NSObject {
+    static let shared = ActionButtonTarget()
 
     @objc func copyCode(_ sender: NSButton) {
-        guard let context = (sender as? CodeCopyButton)?.copyContext else {
+        guard let context = (sender as? CodeActionButton)?.actionContext else {
             return
         }
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(CopyPayloadBuilder.payload(for: context.codeBlock).plainText, forType: .string)
         context.actions.onCopyCode?(context.codeBlock.content, context.codeBlock.language)
+    }
+
+    @objc func downloadCode(_ sender: NSButton) {
+        guard let context = (sender as? CodeActionButton)?.actionContext else {
+            return
+        }
+        context.actions.onDownloadCode?(context.codeBlock.content, context.codeBlock.language)
+    }
+
+    @objc func expandCode(_ sender: NSButton) {
+        guard let context = (sender as? CodeActionButton)?.actionContext else {
+            return
+        }
+        context.actions.onExpandCode?(context.codeBlock.content, context.codeBlock.language)
     }
 }
 #endif

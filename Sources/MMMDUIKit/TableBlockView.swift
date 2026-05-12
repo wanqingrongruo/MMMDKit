@@ -23,7 +23,7 @@ final class TableBlockView: UIView {
         layer.borderWidth = 0.5
         clipsToBounds = true
 
-        let toolbar = Self.toolbar(title: "表格")
+        let toolbar = Self.toolbar(title: "表格", table: table, context: context)
         toolbar.translatesAutoresizingMaskIntoConstraints = false
         addSubview(toolbar)
 
@@ -92,9 +92,7 @@ final class TableBlockView: UIView {
 
     private static func cellView(content: InlineContent, isHeader: Bool) -> UIView {
         let cellView = UIView()
-        cellView.backgroundColor = isHeader ? UIColor { traitCollection in
-            traitCollection.userInterfaceStyle == .dark ? UIColor(white: 0.15, alpha: 1.0) : UIColor(red: 0.95, green: 0.96, blue: 0.97, alpha: 1.0)
-        } : .clear
+        cellView.backgroundColor = .clear
         cellView.layer.borderColor = UIColor.separator.withAlphaComponent(0.3).cgColor
         cellView.layer.borderWidth = 0.5
 
@@ -120,7 +118,7 @@ final class TableBlockView: UIView {
         return cellView
     }
 
-    private static func toolbar(title: String) -> UIView {
+    private static func toolbar(title: String, table: TableBlock, context: RenderContext) -> UIView {
         let container = UIView()
         container.backgroundColor = UIColor { traitCollection in
             traitCollection.userInterfaceStyle == .dark ? UIColor(white: 0.15, alpha: 1.0) : UIColor(red: 0.95, green: 0.96, blue: 0.97, alpha: 1.0)
@@ -137,12 +135,46 @@ final class TableBlockView: UIView {
         actions.alignment = .center
         actions.spacing = 14
         actions.translatesAutoresizingMaskIntoConstraints = false
-        for symbol in ["doc.on.doc", "arrow.down", "arrow.up.left.and.arrow.down.right"] {
-            let imageView = UIImageView(image: UIImage(systemName: symbol))
-            imageView.tintColor = .secondaryLabel
-            imageView.contentMode = .scaleAspectFit
-            imageView.widthAnchor.constraint(equalToConstant: 16).isActive = true
-            actions.addArrangedSubview(imageView)
+        
+        let iconConfiguration = UIImage.SymbolConfiguration(pointSize: 16, weight: .regular)
+        
+        let copyButton = UIButton(type: .custom)
+        copyButton.setImage(UIImage(systemName: "doc.on.doc", withConfiguration: iconConfiguration), for: .normal)
+        copyButton.tintColor = .secondaryLabel
+        copyButton.imageView?.contentMode = .scaleAspectFit
+        copyButton.addAction(UIAction { _ in
+            let text = MarkdownTextExtractor.plainText(from: .table(table))
+            UIPasteboard.general.string = text
+            context.actions.onCopyTable?(text)
+        }, for: .touchUpInside)
+        
+        let downloadButton = UIButton(type: .custom)
+        downloadButton.setImage(UIImage(systemName: "arrow.down", withConfiguration: iconConfiguration), for: .normal)
+        downloadButton.tintColor = .secondaryLabel
+        downloadButton.imageView?.contentMode = .scaleAspectFit
+        downloadButton.addAction(UIAction { _ in
+            let text = MarkdownTextExtractor.plainText(from: .table(table))
+            context.actions.onDownloadTable?(text)
+        }, for: .touchUpInside)
+        
+        let expandButton = UIButton(type: .custom)
+        expandButton.setImage(UIImage(systemName: "arrow.down.left.and.arrow.up.right", withConfiguration: iconConfiguration), for: .normal)
+        expandButton.tintColor = .secondaryLabel
+        expandButton.imageView?.contentMode = .scaleAspectFit
+        expandButton.addAction(UIAction { _ in
+            let text = MarkdownTextExtractor.plainText(from: .table(table))
+            context.actions.onExpandTable?(text)
+        }, for: .touchUpInside)
+
+        let options = context.toolbarOptions
+        if options.showsCopy {
+            actions.addArrangedSubview(copyButton)
+        }
+        if options.showsDownload {
+            actions.addArrangedSubview(downloadButton)
+        }
+        if options.showsExpand {
+            actions.addArrangedSubview(expandButton)
         }
 
         container.addSubview(label)

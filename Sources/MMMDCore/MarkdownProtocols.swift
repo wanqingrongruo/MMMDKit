@@ -31,6 +31,7 @@ public struct RenderContext: Sendable {
     public var theme: MarkdownTheme
     public var environment: RenderEnvironment
     public var actions: MarkdownActions
+    public var toolbarOptions: ToolbarOptions
     public var blockRendererRegistry: BlockRendererRegistry
     public var inlineRendererRegistry: InlineRendererRegistry
     public var codeHighlighter: (any CodeHighlighter)?
@@ -42,6 +43,7 @@ public struct RenderContext: Sendable {
         theme: MarkdownTheme = .default,
         environment: RenderEnvironment = .init(),
         actions: MarkdownActions = .init(),
+        toolbarOptions: ToolbarOptions = .init(),
         blockRendererRegistry: BlockRendererRegistry = .init(),
         inlineRendererRegistry: InlineRendererRegistry = .init(),
         codeHighlighter: (any CodeHighlighter)? = nil,
@@ -52,6 +54,7 @@ public struct RenderContext: Sendable {
         self.theme = theme
         self.environment = environment
         self.actions = actions
+        self.toolbarOptions = toolbarOptions
         self.blockRendererRegistry = blockRendererRegistry
         self.inlineRendererRegistry = inlineRendererRegistry
         self.codeHighlighter = codeHighlighter
@@ -102,17 +105,59 @@ public struct MarkdownActions: Sendable {
     public var onLinkTap: (@Sendable (URL) -> Void)?
     /// 当用户点击代码块的复制按钮时触发，参数分别为代码源码和该代码块的编程语言标识
     public var onCopyCode: (@Sendable (_ code: String, _ language: String?) -> Void)?
+    /// 当用户点击代码块的下载按钮时触发，参数分别为代码源码和语言
+    public var onDownloadCode: (@Sendable (_ code: String, _ language: String?) -> Void)?
+    /// 当用户点击代码块的放大（全屏）按钮时触发
+    public var onExpandCode: (@Sendable (_ code: String, _ language: String?) -> Void)?
+    
+    /// 当用户点击表格的复制按钮时触发，参数为该表格的纯文本/CSV或Markdown表示
+    public var onCopyTable: (@Sendable (_ text: String) -> Void)?
+    /// 当用户点击表格的下载按钮时触发
+    public var onDownloadTable: (@Sendable (_ text: String) -> Void)?
+    /// 当用户点击表格的放大（全屏）按钮时触发
+    public var onExpandTable: (@Sendable (_ text: String) -> Void)?
+
     /// 当视图内的动态内容（如异步图片加载完毕、公式渲染完成）导致容器高度发生变化时触发
     public var onHeightChange: (@Sendable (Double) -> Void)?
 
     public init(
         onLinkTap: (@Sendable (URL) -> Void)? = nil,
         onCopyCode: (@Sendable (_ code: String, _ language: String?) -> Void)? = nil,
+        onDownloadCode: (@Sendable (_ code: String, _ language: String?) -> Void)? = nil,
+        onExpandCode: (@Sendable (_ code: String, _ language: String?) -> Void)? = nil,
+        onCopyTable: (@Sendable (_ text: String) -> Void)? = nil,
+        onDownloadTable: (@Sendable (_ text: String) -> Void)? = nil,
+        onExpandTable: (@Sendable (_ text: String) -> Void)? = nil,
         onHeightChange: (@Sendable (Double) -> Void)? = nil
     ) {
         self.onLinkTap = onLinkTap
         self.onCopyCode = onCopyCode
+        self.onDownloadCode = onDownloadCode
+        self.onExpandCode = onExpandCode
+        self.onCopyTable = onCopyTable
+        self.onDownloadTable = onDownloadTable
+        self.onExpandTable = onExpandTable
         self.onHeightChange = onHeightChange
+    }
+}
+
+/// 控制工具栏（代码块、表格等）按钮显隐的配置项
+public struct ToolbarOptions: Equatable, Sendable {
+    /// 是否展示“复制”按钮，默认为 true
+    public var showsCopy: Bool
+    /// 是否展示“下载”按钮，默认为 false
+    public var showsDownload: Bool
+    /// 是否展示“放大/全屏”按钮，默认为 false
+    public var showsExpand: Bool
+
+    public init(
+        showsCopy: Bool = true,
+        showsDownload: Bool = false,
+        showsExpand: Bool = false
+    ) {
+        self.showsCopy = showsCopy
+        self.showsDownload = showsDownload
+        self.showsExpand = showsExpand
     }
 }
 
@@ -124,6 +169,8 @@ public struct MarkdownConfiguration: Sendable {
     public var plugins: [MarkdownPlugin]
     /// 交互事件的回调闭包集合，如点击链接、复制代码等
     public var actions: MarkdownActions
+    /// 工具栏（代码块、表格等）按钮展示配置
+    public var toolbarOptions: ToolbarOptions
     /// 块级元素的自定义渲染器注册表，用于扩展或覆盖默认的块级渲染规则（如自定义 HTML 块）
     public var blockRendererRegistry: BlockRendererRegistry
     /// 行内元素的自定义渲染器注册表，用于扩展或覆盖默认的行内渲染规则（如自定义标签）
@@ -141,6 +188,7 @@ public struct MarkdownConfiguration: Sendable {
         theme: MarkdownTheme = .default,
         plugins: [MarkdownPlugin] = [],
         actions: MarkdownActions = .init(),
+        toolbarOptions: ToolbarOptions = .init(),
         blockRendererRegistry: BlockRendererRegistry = .init(),
         inlineRendererRegistry: InlineRendererRegistry = .init(),
         codeHighlighter: (any CodeHighlighter)? = nil,
@@ -151,6 +199,7 @@ public struct MarkdownConfiguration: Sendable {
         self.theme = theme
         self.plugins = plugins
         self.actions = actions
+        self.toolbarOptions = toolbarOptions
         self.blockRendererRegistry = blockRendererRegistry
         self.inlineRendererRegistry = inlineRendererRegistry
         self.codeHighlighter = codeHighlighter
