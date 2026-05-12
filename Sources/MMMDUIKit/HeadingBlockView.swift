@@ -25,11 +25,11 @@ final class HeadingBlockView: UILabel {
     private static func font(for level: Int) -> UIFont {
         switch level {
         case 1:
-            return .preferredFont(forTextStyle: .title2)
+            return UIFontMetrics(forTextStyle: .title2).scaledFont(for: UIFont.systemFont(ofSize: 20, weight: .medium))
         case 2:
-            return .preferredFont(forTextStyle: .title3)
+            return UIFontMetrics(forTextStyle: .title3).scaledFont(for: UIFont.systemFont(ofSize: 18, weight: .medium))
         default:
-            return .preferredFont(forTextStyle: .headline)
+            return UIFontMetrics(forTextStyle: .headline).scaledFont(for: UIFont.systemFont(ofSize: 16, weight: .medium))
         }
     }
 }

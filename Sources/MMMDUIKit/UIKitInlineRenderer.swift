@@ -9,6 +9,10 @@ enum UIKitInlineRenderer {
         for node in content.nodes {
             result.append(attributedString(from: node, baseFont: baseFont, linkColor: linkColor))
         }
+        let paragraphStyle = NSMutableParagraphStyle()
+        paragraphStyle.minimumLineHeight = baseFont.pointSize * 1.5
+        paragraphStyle.maximumLineHeight = baseFont.pointSize * 1.5
+        result.addAttribute(.paragraphStyle, value: paragraphStyle, range: NSRange(location: 0, length: result.length))
         return result
     }
 

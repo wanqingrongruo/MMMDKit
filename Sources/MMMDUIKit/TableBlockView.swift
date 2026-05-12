@@ -14,9 +14,12 @@ final class TableBlockView: UIView {
         let columnCount = max(rows.map(\.count).max() ?? 0, 1)
         preferredContentWidth = CGFloat(columnCount) * Self.minimumCellWidth
         super.init(frame: .zero)
-        backgroundColor = .systemBackground
+        
+        backgroundColor = UIColor { traitCollection in
+            traitCollection.userInterfaceStyle == .dark ? UIColor(white: 0.1, alpha: 1.0) : .white
+        }
         layer.cornerRadius = 10
-        layer.borderColor = UIColor.separator.cgColor
+        layer.borderColor = UIColor.separator.withAlphaComponent(0.5).cgColor
         layer.borderWidth = 0.5
         clipsToBounds = true
 
@@ -26,7 +29,7 @@ final class TableBlockView: UIView {
 
         let scrollView = UIScrollView()
         scrollView.showsHorizontalScrollIndicator = true
-        scrollView.backgroundColor = .systemBackground
+        scrollView.backgroundColor = .clear
         scrollView.translatesAutoresizingMaskIntoConstraints = false
         addSubview(scrollView)
 
@@ -89,13 +92,17 @@ final class TableBlockView: UIView {
 
     private static func cellView(content: InlineContent, isHeader: Bool) -> UIView {
         let cellView = UIView()
-        cellView.backgroundColor = isHeader ? .secondarySystemBackground : .systemBackground
-        cellView.layer.borderColor = UIColor.separator.cgColor
+        cellView.backgroundColor = isHeader ? UIColor { traitCollection in
+            traitCollection.userInterfaceStyle == .dark ? UIColor(white: 0.15, alpha: 1.0) : UIColor(red: 0.95, green: 0.96, blue: 0.97, alpha: 1.0)
+        } : .clear
+        cellView.layer.borderColor = UIColor.separator.withAlphaComponent(0.3).cgColor
         cellView.layer.borderWidth = 0.5
 
         let label = UILabel()
         label.numberOfLines = 0
-        label.font = isHeader ? .preferredFont(forTextStyle: .headline) : .preferredFont(forTextStyle: .body)
+        let bodyFont = UIFontMetrics(forTextStyle: .body).scaledFont(for: UIFont.systemFont(ofSize: 16, weight: .regular))
+        let headerFont = UIFontMetrics(forTextStyle: .headline).scaledFont(for: UIFont.systemFont(ofSize: 16, weight: .medium))
+        label.font = isHeader ? headerFont : bodyFont
         label.textColor = .label
         label.text = MarkdownTextExtractor.plainText(from: content)
         label.translatesAutoresizingMaskIntoConstraints = false
@@ -115,7 +122,9 @@ final class TableBlockView: UIView {
 
     private static func toolbar(title: String) -> UIView {
         let container = UIView()
-        container.backgroundColor = .secondarySystemBackground
+        container.backgroundColor = UIColor { traitCollection in
+            traitCollection.userInterfaceStyle == .dark ? UIColor(white: 0.15, alpha: 1.0) : UIColor(red: 0.95, green: 0.96, blue: 0.97, alpha: 1.0)
+        }
 
         let label = UILabel()
         label.font = .preferredFont(forTextStyle: .caption1)

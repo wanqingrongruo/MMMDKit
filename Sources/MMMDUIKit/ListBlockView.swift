@@ -25,15 +25,17 @@ final class ListBlockView: UIStackView {
         row.alignment = .firstBaseline
         row.spacing = 8
 
+        let font = UIFontMetrics(forTextStyle: .body).scaledFont(for: UIFont.systemFont(ofSize: 16, weight: .regular))
+        
         let markerLabel = UILabel()
-        markerLabel.font = .preferredFont(forTextStyle: .body)
+        markerLabel.font = font
         markerLabel.textColor = .secondaryLabel
         markerLabel.text = marker
         markerLabel.widthAnchor.constraint(greaterThanOrEqualToConstant: 24).isActive = true
 
         let contentLabel = UILabel()
         contentLabel.numberOfLines = 0
-        contentLabel.font = .preferredFont(forTextStyle: .body)
+        contentLabel.font = font
         contentLabel.textColor = .label
         contentLabel.text = item.blocks.map(MarkdownTextExtractor.plainText(from:)).joined(separator: "\n")
         contentLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)

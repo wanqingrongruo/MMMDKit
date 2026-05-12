@@ -40,10 +40,10 @@ public struct MarkdownTypography: Equatable, Sendable {
     }
 
     public static let `default` = MarkdownTypography(
-        body: .init(textStyle: "body", pointSize: 17, weight: "regular"),
-        code: .init(textStyle: "body", pointSize: 15, weight: "regular", design: "monospaced"),
-        heading1: .init(textStyle: "title2", pointSize: 22, weight: "semibold"),
-        heading2: .init(textStyle: "title3", pointSize: 20, weight: "semibold")
+        body: .init(textStyle: "body", pointSize: 16, weight: "regular"),
+        code: .init(textStyle: "body", pointSize: 14, weight: "regular", design: "monospaced"),
+        heading1: .init(textStyle: "title2", pointSize: 20, weight: "medium"),
+        heading2: .init(textStyle: "title3", pointSize: 18, weight: "medium")
     )
 }
 
@@ -105,9 +105,9 @@ public struct MarkdownSpacing: Equatable, Sendable {
     }
 
     public static let `default` = MarkdownSpacing(
-        blockSpacing: 12,
-        paragraphSpacing: 8,
-        listIndent: 24,
+        blockSpacing: 14,
+        paragraphSpacing: 10,
+        listIndent: 20,
         codePadding: 12
     )
 }

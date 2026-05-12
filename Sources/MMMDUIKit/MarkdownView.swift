@@ -44,29 +44,36 @@ open class MarkdownView: UIView {
     public static func estimatedHeight(for document: MarkdownDocument, width: CGFloat, configuration: MarkdownConfiguration) -> CGFloat {
         let blockHeights = document.blocks.map { block -> CGFloat in
             switch block {
-            case .heading:
-                return max(24, textHeight(MarkdownTextExtractor.plainText(from: block), width: width, font: .preferredFont(forTextStyle: .headline)))
+            case .heading(let level, _):
+                let size: CGFloat = level == 1 ? 20 : (level == 2 ? 18 : 16)
+                let font = UIFontMetrics(forTextStyle: .headline).scaledFont(for: UIFont.systemFont(ofSize: size, weight: .medium))
+                return max(24, textHeight(MarkdownTextExtractor.plainText(from: block), width: width, font: font))
             case .paragraph:
-                return max(20, textHeight(MarkdownTextExtractor.plainText(from: block), width: width, font: .preferredFont(forTextStyle: .body)))
+                let font = UIFontMetrics(forTextStyle: .body).scaledFont(for: UIFont.systemFont(ofSize: 16, weight: .regular))
+                return max(20, textHeight(MarkdownTextExtractor.plainText(from: block), width: width, font: font))
             case .list(let list):
+                let font = UIFontMetrics(forTextStyle: .body).scaledFont(for: UIFont.systemFont(ofSize: 16, weight: .regular))
                 return list.items.map { item in
-                    textHeight(item.blocks.map(MarkdownTextExtractor.plainText(from:)).joined(separator: "\n"), width: max(1, width - 32), font: .preferredFont(forTextStyle: .body)) + 6
+                    textHeight(item.blocks.map(MarkdownTextExtractor.plainText(from:)).joined(separator: "\n"), width: max(1, width - 32), font: font) + 6
                 }.reduce(0, +)
             case .blockquote:
-                return max(40, textHeight(MarkdownTextExtractor.plainText(from: block), width: max(1, width - 41), font: .preferredFont(forTextStyle: .body)) + 20)
+                let font = UIFontMetrics(forTextStyle: .body).scaledFont(for: UIFont.systemFont(ofSize: 16, weight: .regular))
+                return max(40, textHeight(MarkdownTextExtractor.plainText(from: block), width: max(1, width - 41), font: font) + 20)
             case .code(let codeBlock):
                 let lineCount = max(1, codeBlock.content.split(separator: "\n", omittingEmptySubsequences: false).count)
                 return CGFloat(lineCount) * 18 + 58
             case .table(let table):
                 return CGFloat(max(1, table.rows.count + (table.header.isEmpty ? 0 : 1))) * 42 + 50
             case .math:
-                return max(40, textHeight(MarkdownTextExtractor.plainText(from: block), width: max(1, width - 24), font: .preferredFont(forTextStyle: .body)) + 20)
+                let font = UIFontMetrics(forTextStyle: .body).scaledFont(for: UIFont.systemFont(ofSize: 16, weight: .regular))
+                return max(40, textHeight(MarkdownTextExtractor.plainText(from: block), width: max(1, width - 24), font: font) + 20)
             case .html:
                 return 120
             case .image:
                 return 180
             default:
-                return max(20, textHeight(MarkdownTextExtractor.plainText(from: block), width: width, font: .preferredFont(forTextStyle: .body)))
+                let font = UIFontMetrics(forTextStyle: .body).scaledFont(for: UIFont.systemFont(ofSize: 16, weight: .regular))
+                return max(20, textHeight(MarkdownTextExtractor.plainText(from: block), width: width, font: font))
             }
         }
         let spacing = max(0, CGFloat(max(0, document.blocks.count - 1)) * configuration.theme.spacing.blockSpacing)

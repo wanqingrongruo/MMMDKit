@@ -16,7 +16,8 @@ final class ParagraphBlockView: UITextView, UITextViewDelegate {
         adjustsFontForContentSizeCategory = true
         delegate = self
         onLinkTap = context.actions.onLinkTap
-        attributedText = UIKitInlineRenderer.attributedString(from: content, baseFont: .preferredFont(forTextStyle: .body))
+        let font = UIFontMetrics(forTextStyle: .body).scaledFont(for: UIFont.systemFont(ofSize: 16, weight: .regular))
+        attributedText = UIKitInlineRenderer.attributedString(from: content, baseFont: font)
         isAccessibilityElement = true
         accessibilityLabel = MarkdownTextExtractor.plainText(from: content)
         setContentCompressionResistancePriority(.defaultLow, for: .horizontal)

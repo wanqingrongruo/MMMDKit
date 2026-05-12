@@ -455,9 +455,13 @@ private final class ChatMessageBubbleView: UIView {
     private func backgroundColor(for role: DemoChatMessage.Role) -> UIColor {
         switch role {
         case .assistant:
-            return .secondarySystemBackground
+            return UIColor { traitCollection in
+                traitCollection.userInterfaceStyle == .dark ? UIColor(white: 0.16, alpha: 1.0) : UIColor(red: 0.95, green: 0.95, blue: 0.96, alpha: 1.0)
+            }
         case .user:
-            return .systemBlue.withAlphaComponent(0.16)
+            return UIColor { traitCollection in
+                traitCollection.userInterfaceStyle == .dark ? UIColor(red: 0.11, green: 0.33, blue: 0.90, alpha: 0.3) : UIColor(red: 0.91, green: 0.95, blue: 1.0, alpha: 1.0)
+            }
         }
     }
 

@@ -9,9 +9,11 @@ final class MathBlockView: UIView {
 
     init(mathBlock: MathBlock, context: RenderContext) {
         super.init(frame: .zero)
-        backgroundColor = .tertiarySystemBackground
+        backgroundColor = UIColor { traitCollection in
+            traitCollection.userInterfaceStyle == .dark ? UIColor(white: 0.1, alpha: 1.0) : UIColor(red: 0.98, green: 0.98, blue: 0.99, alpha: 1.0)
+        }
         layer.cornerRadius = 10
-        layer.borderColor = UIColor.separator.cgColor
+        layer.borderColor = UIColor.separator.withAlphaComponent(0.3).cgColor
         layer.borderWidth = 0.5
         isAccessibilityElement = true
         accessibilityLabel = mathBlock.latex

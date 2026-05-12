@@ -6,20 +6,24 @@ import UIKit
 final class BlockquoteBlockView: UIView {
     init(blocks: [MarkdownBlock], context: RenderContext) {
         super.init(frame: .zero)
-        backgroundColor = .tertiarySystemBackground
-        layer.cornerRadius = 10
-        layer.borderColor = UIColor.separator.cgColor
-        layer.borderWidth = 0.5
+        backgroundColor = .clear
         clipsToBounds = true
 
         let indicator = UIView()
-        indicator.backgroundColor = .secondaryLabel
+        indicator.backgroundColor = UIColor { traitCollection in
+            traitCollection.userInterfaceStyle == .dark ? UIColor(white: 0.3, alpha: 1.0) : UIColor(red: 0.88, green: 0.89, blue: 0.9, alpha: 1.0)
+        }
+        indicator.layer.cornerRadius = 2
         indicator.translatesAutoresizingMaskIntoConstraints = false
 
+        let font = UIFontMetrics(forTextStyle: .body).scaledFont(for: UIFont.systemFont(ofSize: 16, weight: .regular))
+        
         let label = UILabel()
         label.numberOfLines = 0
-        label.font = .preferredFont(forTextStyle: .body)
-        label.textColor = .secondaryLabel
+        label.font = font
+        label.textColor = UIColor { traitCollection in
+            traitCollection.userInterfaceStyle == .dark ? UIColor(white: 0.6, alpha: 1.0) : UIColor(red: 0.4, green: 0.4, blue: 0.42, alpha: 1.0)
+        }
         label.text = blocks.map(MarkdownTextExtractor.plainText(from:)).joined(separator: "\n")
         label.translatesAutoresizingMaskIntoConstraints = false
         label.isAccessibilityElement = true
@@ -29,15 +33,15 @@ final class BlockquoteBlockView: UIView {
         addSubview(indicator)
         addSubview(label)
         NSLayoutConstraint.activate([
-            indicator.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 10),
-            indicator.topAnchor.constraint(equalTo: topAnchor, constant: 10),
-            indicator.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -10),
-            indicator.widthAnchor.constraint(equalToConstant: 3),
+            indicator.leadingAnchor.constraint(equalTo: leadingAnchor),
+            indicator.topAnchor.constraint(equalTo: topAnchor, constant: 2),
+            indicator.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -2),
+            indicator.widthAnchor.constraint(equalToConstant: 4),
 
-            label.leadingAnchor.constraint(equalTo: indicator.trailingAnchor, constant: 10),
-            label.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -12),
-            label.topAnchor.constraint(equalTo: topAnchor, constant: 10),
-            label.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -10)
+            label.leadingAnchor.constraint(equalTo: indicator.trailingAnchor, constant: 12),
+            label.trailingAnchor.constraint(equalTo: trailingAnchor),
+            label.topAnchor.constraint(equalTo: topAnchor),
+            label.bottomAnchor.constraint(equalTo: bottomAnchor)
         ])
     }
 

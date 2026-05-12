@@ -7,9 +7,11 @@ import UIKit
 final class CodeBlockView: UIView {
     init(codeBlock: CodeBlock, context: RenderContext) {
         super.init(frame: .zero)
-        backgroundColor = .systemBackground
+        backgroundColor = UIColor { traitCollection in
+            traitCollection.userInterfaceStyle == .dark ? UIColor(white: 0.1, alpha: 1.0) : UIColor(red: 0.98, green: 0.98, blue: 0.99, alpha: 1.0)
+        }
         layer.cornerRadius = 10
-        layer.borderColor = UIColor.separator.cgColor
+        layer.borderColor = UIColor.separator.withAlphaComponent(0.3).cgColor
         layer.borderWidth = 0.5
         clipsToBounds = true
         isAccessibilityElement = false
@@ -31,7 +33,7 @@ final class CodeBlockView: UIView {
         textView.isScrollEnabled = false
         textView.textContainerInset = .zero
         textView.textContainer.lineFragmentPadding = 0
-        textView.font = .monospacedSystemFont(ofSize: UIFont.preferredFont(forTextStyle: .body).pointSize - 1, weight: .regular)
+        textView.font = .monospacedSystemFont(ofSize: 14, weight: .regular)
         textView.textColor = .label
         textView.text = codeBlock.content
         textView.isAccessibilityElement = true
@@ -83,7 +85,9 @@ final class CodeBlockView: UIView {
         row.axis = .horizontal
         row.alignment = .center
         row.spacing = 14
-        row.backgroundColor = .secondarySystemBackground
+        row.backgroundColor = UIColor { traitCollection in
+            traitCollection.userInterfaceStyle == .dark ? UIColor(white: 0.15, alpha: 1.0) : UIColor(red: 0.95, green: 0.96, blue: 0.97, alpha: 1.0)
+        }
         row.layoutMargins = UIEdgeInsets(top: 0, left: 12, bottom: 0, right: 12)
         row.isLayoutMarginsRelativeArrangement = true
         row.heightAnchor.constraint(equalToConstant: 36).isActive = true
