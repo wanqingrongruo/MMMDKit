@@ -41,36 +41,31 @@ open class MarkdownNSView: NSView {
         needsLayout = true
     }
 
+    private static var heightCache = NSCache<NSString, NSNumber>()
+    private static let sizingView: MarkdownNSView = {
+        let view = MarkdownNSView()
+        view.translatesAutoresizingMaskIntoConstraints = false
+        return view
+    }()
+
     public static func estimatedHeight(for document: MarkdownDocument, width: CGFloat, configuration: MarkdownConfiguration) -> CGFloat {
-        let blockHeights = document.blocks.map { block -> CGFloat in
-            switch block {
-            case .heading:
-                return max(24, textHeight(MarkdownTextExtractor.plainText(from: block), width: width, font: .preferredFont(forTextStyle: .headline)))
-            case .paragraph:
-                return max(20, textHeight(MarkdownTextExtractor.plainText(from: block), width: width, font: .preferredFont(forTextStyle: .body)))
-            case .list(let list):
-                return list.items.map { item in
-                    textHeight(item.blocks.map(MarkdownTextExtractor.plainText(from:)).joined(separator: "\n"), width: max(1, width - 32), font: .preferredFont(forTextStyle: .body)) + 6
-                }.reduce(0, +)
-            case .blockquote:
-                return max(40, textHeight(MarkdownTextExtractor.plainText(from: block), width: max(1, width - 41), font: .preferredFont(forTextStyle: .body)) + 20)
-            case .code(let codeBlock):
-                let lineCount = max(1, codeBlock.content.split(separator: "\n", omittingEmptySubsequences: false).count)
-                return CGFloat(lineCount) * 18 + 58
-            case .table(let table):
-                return CGFloat(max(1, table.rows.count + (table.header.isEmpty ? 0 : 1))) * 42 + 50
-            case .math:
-                return max(40, textHeight(MarkdownTextExtractor.plainText(from: block), width: max(1, width - 24), font: .preferredFont(forTextStyle: .body)) + 20)
-            case .html:
-                return 120
-            case .image:
-                return 180
-            default:
-                return max(20, textHeight(MarkdownTextExtractor.plainText(from: block), width: width, font: .preferredFont(forTextStyle: .body)))
-            }
+        let cacheKey = "\(document.source.hashValue)_\(width)" as NSString
+        if let cached = heightCache.object(forKey: cacheKey) {
+            return CGFloat(cached.floatValue)
         }
-        let spacing = max(0, CGFloat(max(0, document.blocks.count - 1)) * configuration.theme.spacing.blockSpacing)
-        return max(1, blockHeights.reduce(0, +) + spacing)
+        
+        sizingView.configuration = configuration
+        sizingView.render(document)
+        
+        let widthConstraint = sizingView.widthAnchor.constraint(equalToConstant: width)
+        widthConstraint.isActive = true
+        sizingView.layoutSubtreeIfNeeded()
+        
+        let totalHeight = ceil(sizingView.fittingSize.height)
+        widthConstraint.isActive = false
+        
+        heightCache.setObject(NSNumber(value: Float(totalHeight)), forKey: cacheKey)
+        return totalHeight
     }
 
     private static func textHeight(_ text: String, width: CGFloat, font: NSFont) -> CGFloat {
@@ -102,11 +97,15 @@ open class MarkdownNSView: NSView {
 
         var textBlocks: [MarkdownBlock] = []
 
+        var currentBlockIndex = 0
+
         func flushTextBlocks() {
             guard !textBlocks.isEmpty else { return }
-            let combinedView = TextBlockView(blocks: textBlocks, context: context)
+            let cacheKey = "\(document.source.hashValue)_\(currentBlockIndex)"
+            let combinedView = TextBlockView(blocks: textBlocks, context: context, cacheKey: cacheKey)
             combinedView.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
             stackView.addArrangedSubview(combinedView)
+            currentBlockIndex += textBlocks.count
             textBlocks.removeAll()
         }
 
@@ -139,10 +138,12 @@ open class MarkdownNSView: NSView {
             case .image(let imageBlock):
                 blockView = ImageBlockView(imageBlock: imageBlock, context: context)
             default:
+                currentBlockIndex += 1
                 continue
             }
             blockView.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
             stackView.addArrangedSubview(blockView)
+            currentBlockIndex += 1
         }
         flushTextBlocks()
     }

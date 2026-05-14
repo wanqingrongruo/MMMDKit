@@ -79,7 +79,8 @@ open class MarkdownCollectionViewHost: NSView, NSCollectionViewDataSource, NSCol
         case .single(let block):
             blockView = self.blockView(for: block, context: context)
         case .textGroup(let blocks):
-            blockView = TextBlockView(blocks: blocks, context: context)
+            let cacheKey = "\(document.source.hashValue)_\(indexPath.item)"
+            blockView = TextBlockView(blocks: blocks, context: context, cacheKey: cacheKey)
         }
         
         item.host(blockView)

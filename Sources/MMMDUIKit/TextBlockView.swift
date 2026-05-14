@@ -6,7 +6,9 @@ import UIKit
 final class TextBlockView: UITextView, UITextViewDelegate {
     private var onLinkTap: (@Sendable (URL) -> Void)?
 
-    init(blocks: [MarkdownBlock], context: RenderContext, textColor: UIColor? = nil) {
+    private static let attrStringCache = NSCache<NSString, NSAttributedString>()
+
+    init(blocks: [MarkdownBlock], context: RenderContext, cacheKey: String? = nil, textColor: UIColor? = nil) {
         super.init(frame: .zero, textContainer: nil)
         backgroundColor = .clear
         isEditable = false
@@ -18,7 +20,17 @@ final class TextBlockView: UITextView, UITextViewDelegate {
         onLinkTap = context.actions.onLinkTap
         
         let resolvedTextColor = textColor ?? .label
-        let result = Self.attributedString(for: blocks, context: context, textColor: resolvedTextColor, listLevel: 0, blockquoteLevel: 0)
+        let result: NSAttributedString
+        
+        if let cacheKey = cacheKey as NSString?,
+           let cached = Self.attrStringCache.object(forKey: cacheKey) {
+            result = cached
+        } else {
+            result = Self.attributedString(for: blocks, context: context, textColor: resolvedTextColor, listLevel: 0, blockquoteLevel: 0)
+            if let cacheKey = cacheKey as NSString? {
+                Self.attrStringCache.setObject(result, forKey: cacheKey)
+            }
+        }
         
         attributedText = result
         isAccessibilityElement = true

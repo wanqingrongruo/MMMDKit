@@ -38,6 +38,7 @@ final class DemoMarkdownViewController: UIViewController {
     private let addConversationButton = UIButton(type: .system)
     private var configuration: MarkdownConfiguration!
     private var messages: [DemoChatMessage] = []
+    private var streamingMessages: [DemoChatMessage] = []
     private var streamingProcessor: StreamingMarkdownProcessor?
     private var streamingTimer: Timer?
     private var streamingChunks: [String] = []
@@ -49,11 +50,13 @@ final class DemoMarkdownViewController: UIViewController {
     private var currentStreamingAssistantID: String?
     private var isApplyingStreamingReload = false
 
+    private var viewCache: [String: ChatMessageBubbleView] = [:]
+
     init() {
         let layout = UICollectionViewFlowLayout()
         layout.minimumLineSpacing = 14
         layout.minimumInteritemSpacing = 0
-        layout.estimatedItemSize = UICollectionViewFlowLayout.automaticSize
+        layout.estimatedItemSize = .zero
         transcriptCollectionView = UICollectionView(frame: .zero, collectionViewLayout: layout)
         super.init(nibName: nil, bundle: nil)
     }
@@ -62,7 +65,7 @@ final class DemoMarkdownViewController: UIViewController {
         let layout = UICollectionViewFlowLayout()
         layout.minimumLineSpacing = 14
         layout.minimumInteritemSpacing = 0
-        layout.estimatedItemSize = UICollectionViewFlowLayout.automaticSize
+        layout.estimatedItemSize = .zero
         transcriptCollectionView = UICollectionView(frame: .zero, collectionViewLayout: layout)
         super.init(coder: coder)
     }
@@ -122,14 +125,27 @@ final class DemoMarkdownViewController: UIViewController {
 
     @objc private func modeChanged() {
         if modeControl.selectedSegmentIndex == 0 {
+            // Switch to static feed
+            streamingMessages = messages
             showChatFeed()
         } else {
-            startStreaming(resetTranscript: true)
+            // Switch to streaming feed
+            addConversationButton.isHidden = false
+            messages = streamingMessages
+            transcriptCollectionView.collectionViewLayout.invalidateLayout()
+            transcriptCollectionView.reloadData()
+            
+            if messages.isEmpty || currentStreamingAssistantID == nil {
+                startStreaming(resetTranscript: true)
+            } else {
+                // If there's an ongoing stream or existing messages, just let them see it
+                scrollToBottom(animated: false)
+            }
         }
     }
 
     @objc private func addConversationTapped() {
-        appendStreamingConversation()
+        appendStreamingConversation(isInitial: false)
     }
 
     private func setupTranscriptCollectionView() {
@@ -170,15 +186,6 @@ final class DemoMarkdownViewController: UIViewController {
     }
 
     private func showChatFeed() {
-        streamingTimer?.invalidate()
-        streamingUpdateWorkItem?.cancel()
-        streamingUpdateWorkItem = nil
-        pendingStreamingDocument = nil
-        isApplyingStreamingReload = false
-        streamingTimer = nil
-        streamingProcessor = nil
-        streamingConversationIndex = 0
-        currentStreamingAssistantID = nil
         addConversationButton.isHidden = true
         messages = DemoMarkdownSamples.chatMessages
         transcriptCollectionView.collectionViewLayout.invalidateLayout()
@@ -192,17 +199,19 @@ final class DemoMarkdownViewController: UIViewController {
         pendingStreamingDocument = nil
         isApplyingStreamingReload = false
         addConversationButton.isHidden = false
+        
+        var isInitial = false
         if resetTranscript {
             streamingConversationIndex = 0
             currentStreamingAssistantID = nil
             messages.removeAll()
-            transcriptCollectionView.collectionViewLayout.invalidateLayout()
-            transcriptCollectionView.reloadData()
+            streamingMessages.removeAll()
+            isInitial = true
         }
-        appendStreamingConversation()
+        appendStreamingConversation(isInitial: isInitial)
     }
 
-    private func appendStreamingConversation() {
+    private func appendStreamingConversation(isInitial: Bool) {
         streamingTimer?.invalidate()
         streamingUpdateWorkItem?.cancel()
         streamingUpdateWorkItem = nil
@@ -214,17 +223,30 @@ final class DemoMarkdownViewController: UIViewController {
         let assistant = DemoMarkdownSamples.makeStreamingAssistantPlaceholder(index: streamingConversationIndex)
         currentStreamingAssistantID = assistant.id
 
-        let insertionStart = messages.count
-        let insertedIndexPaths = [
-            IndexPath(item: insertionStart, section: 0),
-            IndexPath(item: insertionStart + 1, section: 0)
-        ]
-        transcriptCollectionView.performBatchUpdates {
-            messages.append(userMessage)
-            messages.append(assistant)
-            transcriptCollectionView.insertItems(at: insertedIndexPaths)
-        } completion: { [weak self] _ in
-            self?.scrollToBottom(animated: true)
+        let insertionStart = streamingMessages.count
+        streamingMessages.append(userMessage)
+        streamingMessages.append(assistant)
+
+        let shouldUpdateUI = modeControl.selectedSegmentIndex == 1
+        if shouldUpdateUI {
+            messages = streamingMessages
+            if isInitial {
+                transcriptCollectionView.collectionViewLayout.invalidateLayout()
+                transcriptCollectionView.reloadData()
+                DispatchQueue.main.async { [weak self] in
+                    self?.scrollToBottom(animated: false)
+                }
+            } else {
+                let insertedIndexPaths = [
+                    IndexPath(item: insertionStart, section: 0),
+                    IndexPath(item: insertionStart + 1, section: 0)
+                ]
+                transcriptCollectionView.performBatchUpdates {
+                    transcriptCollectionView.insertItems(at: insertedIndexPaths)
+                } completion: { [weak self] _ in
+                    self?.scrollToBottom(animated: true)
+                }
+            }
         }
 
         streamingChunks = DemoMarkdownSamples.streamingChunks()
@@ -286,31 +308,45 @@ final class DemoMarkdownViewController: UIViewController {
             scheduleStreamingAssistantUpdate(with: document)
             return
         }
-        guard let currentStreamingAssistantID,
-              let index = messages.lastIndex(where: { $0.id == currentStreamingAssistantID }) else {
+        guard let currentStreamingAssistantID else { return }
+        
+        let shouldUpdateUI = modeControl.selectedSegmentIndex == 1
+        var targetArray = shouldUpdateUI ? messages : streamingMessages
+        
+        guard let index = targetArray.lastIndex(where: { $0.id == currentStreamingAssistantID }) else {
             return
         }
-        let shouldPinToBottom = isNearBottom()
-        messages[index] = DemoChatMessage(
+        
+        let newMessage = DemoChatMessage(
             id: currentStreamingAssistantID,
             role: .assistant,
             title: "AI 助手 \(String(format: "%02d", streamingConversationIndex))",
             markdown: document.source,
             document: document
         )
-        let indexPath = IndexPath(item: index, section: 0)
-        isApplyingStreamingReload = true
-        UIView.performWithoutAnimation {
-            transcriptCollectionView.performBatchUpdates {
-                transcriptCollectionView.collectionViewLayout.invalidateLayout()
-                transcriptCollectionView.reloadItems(at: [indexPath])
-            } completion: { [weak self] _ in
-                guard let self else { return }
-                self.isApplyingStreamingReload = false
-                if shouldPinToBottom {
-                    self.scrollToBottom(animated: false)
+        
+        targetArray[index] = newMessage
+        
+        if shouldUpdateUI {
+            messages = targetArray
+            streamingMessages = targetArray
+            let shouldPinToBottom = isNearBottom()
+            let indexPath = IndexPath(item: index, section: 0)
+            isApplyingStreamingReload = true
+            UIView.performWithoutAnimation {
+                transcriptCollectionView.performBatchUpdates {
+                    transcriptCollectionView.collectionViewLayout.invalidateLayout()
+                    transcriptCollectionView.reloadItems(at: [indexPath])
+                } completion: { [weak self] _ in
+                    guard let self else { return }
+                    self.isApplyingStreamingReload = false
+                    if shouldPinToBottom {
+                        self.scrollToBottom(animated: false)
+                    }
                 }
             }
+        } else {
+            streamingMessages = targetArray
         }
     }
 
@@ -336,7 +372,18 @@ extension DemoMarkdownViewController: UICollectionViewDataSource, UICollectionVi
 
     func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
         let cell = collectionView.dequeueReusableCell(withReuseIdentifier: ChatMessageCell.reuseIdentifier, for: indexPath) as? ChatMessageCell ?? ChatMessageCell()
-        cell.configure(message: messages[indexPath.item], configuration: configuration, containerWidth: collectionView.bounds.width)
+        let message = messages[indexPath.item]
+        
+        let bubble: ChatMessageBubbleView
+        if let cached = viewCache[message.id] {
+            bubble = cached
+        } else {
+            bubble = ChatMessageBubbleView()
+            viewCache[message.id] = bubble
+        }
+        
+        cell.host(bubble)
+        bubble.configure(message: message, configuration: configuration, containerWidth: collectionView.bounds.width)
         return cell
     }
 
@@ -353,10 +400,20 @@ extension DemoMarkdownViewController: UICollectionViewDataSource, UICollectionVi
 
 private final class ChatMessageCell: UICollectionViewCell {
     static let reuseIdentifier = "MMMDKit.ChatMessageCell"
-    private let bubble = ChatMessageBubbleView()
+    private var hostedBubble: ChatMessageBubbleView?
 
     override init(frame: CGRect) {
         super.init(frame: frame)
+    }
+
+    required init?(coder: NSCoder) {
+        super.init(coder: coder)
+    }
+
+    func host(_ bubble: ChatMessageBubbleView) {
+        if hostedBubble == bubble { return }
+        hostedBubble?.removeFromSuperview()
+        hostedBubble = bubble
         bubble.translatesAutoresizingMaskIntoConstraints = false
         contentView.addSubview(bubble)
         let bottomConstraint = bubble.bottomAnchor.constraint(equalTo: contentView.bottomAnchor)
@@ -368,35 +425,18 @@ private final class ChatMessageCell: UICollectionViewCell {
             bottomConstraint
         ])
     }
-
-    required init?(coder: NSCoder) {
-        super.init(coder: coder)
-    }
-
-    override func preferredLayoutAttributesFitting(_ layoutAttributes: UICollectionViewLayoutAttributes) -> UICollectionViewLayoutAttributes {
-        let attributes = super.preferredLayoutAttributesFitting(layoutAttributes)
-        let targetSize = CGSize(width: layoutAttributes.size.width, height: UIView.layoutFittingCompressedSize.height)
-        let size = contentView.systemLayoutSizeFitting(
-            targetSize,
-            withHorizontalFittingPriority: .required,
-            verticalFittingPriority: .fittingSizeLevel
-        )
-        attributes.size = CGSize(width: layoutAttributes.size.width, height: ceil(size.height))
-        return attributes
-    }
-
-    func configure(message: DemoChatMessage, configuration: MarkdownConfiguration, containerWidth: CGFloat) {
-        bubble.configure(message: message, configuration: configuration, containerWidth: containerWidth)
-    }
 }
 
 private final class ChatMessageBubbleView: UIView {
+    private static var widthCache = NSCache<NSString, NSNumber>()
+
     private let bubbleView = UIView()
     private let titleLabel = UILabel()
     private let markdownView = MarkdownView()
     private var alignmentConstraints: [NSLayoutConstraint] = []
     private var currentRole: DemoChatMessage.Role?
     private var currentMessageID: String?
+    private var currentDocumentSourceCount: Int = -1
     private var maxBubbleWidth: CGFloat = 0
     private var minWidthConstraint: NSLayoutConstraint?
     private var maxWidthConstraint: NSLayoutConstraint?
@@ -412,24 +452,34 @@ private final class ChatMessageBubbleView: UIView {
     }
 
     func configure(message: DemoChatMessage, configuration: MarkdownConfiguration, containerWidth: CGFloat) {
-        if message.id != currentMessageID {
+        let isSameMessage = message.id == currentMessageID
+        let isSameDocument = message.document.source.count == currentDocumentSourceCount
+
+        if !isSameMessage || !isSameDocument {
+            titleLabel.text = message.title
+            bubbleView.backgroundColor = backgroundColor(for: message.role)
+            markdownView.configuration = configuration
+            markdownView.render(message.document)
+            markdownView.invalidateIntrinsicContentSize()
+            
             currentMessageID = message.id
+            currentDocumentSourceCount = message.document.source.count
             maxBubbleWidth = 0
             minWidthConstraint?.isActive = false
         }
-
-        titleLabel.text = message.title
-        bubbleView.backgroundColor = backgroundColor(for: message.role)
-        markdownView.configuration = configuration
-        markdownView.render(message.document)
-        markdownView.invalidateIntrinsicContentSize()
-        
-        maxWidthConstraint?.isActive = false
-        let unconstrainedSize = bubbleView.systemLayoutSizeFitting(UIView.layoutFittingCompressedSize)
-        maxWidthConstraint?.isActive = true
         
         let allowedMaxWidth = containerWidth * 0.9
-        let targetWidth = min(unconstrainedSize.width, allowedMaxWidth)
+        let cacheKey = "\(message.id)_\(allowedMaxWidth)_\(message.document.source.count)" as NSString
+        let targetWidth: CGFloat
+        if let cached = Self.widthCache.object(forKey: cacheKey) {
+            targetWidth = CGFloat(cached.floatValue)
+        } else {
+            maxWidthConstraint?.isActive = false
+            let unconstrainedSize = bubbleView.systemLayoutSizeFitting(UIView.layoutFittingCompressedSize)
+            maxWidthConstraint?.isActive = true
+            targetWidth = min(unconstrainedSize.width, allowedMaxWidth)
+            Self.widthCache.setObject(NSNumber(value: Float(targetWidth)), forKey: cacheKey)
+        }
         
         if targetWidth > maxBubbleWidth {
             maxBubbleWidth = targetWidth
@@ -510,10 +560,25 @@ private final class ChatMessageBubbleView: UIView {
         }
     }
 
+    private static var bubbleHeightCache = NSCache<NSString, NSNumber>()
+    private static let sizingBubble = ChatMessageBubbleView()
+
     static func estimatedHeight(for message: DemoChatMessage, width: CGFloat, configuration: MarkdownConfiguration) -> CGFloat {
-        // 0.9 这个系数记得在写约束时也写上，保持一致
-        let bubbleWidth = max(1, width * 0.9 - 28)
-        let markdownHeight = MarkdownView.estimatedHeight(for: message.document, width: bubbleWidth, configuration: configuration)
-        return max(44, ceil(10 + 14 + 8 + markdownHeight + 12))
+        let cacheKey = "\(message.id)_\(width)_\(message.document.source.count)" as NSString
+        if let cached = bubbleHeightCache.object(forKey: cacheKey) {
+            return CGFloat(cached.floatValue)
+        }
+        
+        sizingBubble.configure(message: message, configuration: configuration, containerWidth: width)
+        let targetSize = CGSize(width: width, height: UIView.layoutFittingCompressedSize.height)
+        let size = sizingBubble.systemLayoutSizeFitting(
+            targetSize,
+            withHorizontalFittingPriority: .required,
+            verticalFittingPriority: .fittingSizeLevel
+        )
+        
+        let totalHeight = ceil(size.height)
+        bubbleHeightCache.setObject(NSNumber(value: Float(totalHeight)), forKey: cacheKey)
+        return totalHeight
     }
 }

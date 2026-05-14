@@ -41,43 +41,28 @@ open class MarkdownView: UIView {
         setNeedsLayout()
     }
 
+    private static var heightCache = NSCache<NSString, NSNumber>()
+    private static let sizingView = MarkdownView()
+
     public static func estimatedHeight(for document: MarkdownDocument, width: CGFloat, configuration: MarkdownConfiguration) -> CGFloat {
-        let blockHeights = document.blocks.map { block -> CGFloat in
-            switch block {
-            case .heading(let level, _):
-                let size: CGFloat = level == 1 ? 20 : (level == 2 ? 18 : 16)
-                let font = UIFontMetrics(forTextStyle: .headline).scaledFont(for: UIFont.systemFont(ofSize: size, weight: .medium))
-                return max(24, textHeight(MarkdownTextExtractor.plainText(from: block), width: width, font: font))
-            case .paragraph:
-                let font = UIFontMetrics(forTextStyle: .body).scaledFont(for: UIFont.systemFont(ofSize: 16, weight: .regular))
-                return max(20, textHeight(MarkdownTextExtractor.plainText(from: block), width: width, font: font))
-            case .list(let list):
-                let font = UIFontMetrics(forTextStyle: .body).scaledFont(for: UIFont.systemFont(ofSize: 16, weight: .regular))
-                return list.items.map { item in
-                    textHeight(item.blocks.map(MarkdownTextExtractor.plainText(from:)).joined(separator: "\n"), width: max(1, width - 32), font: font) + 6
-                }.reduce(0, +)
-            case .blockquote:
-                let font = UIFontMetrics(forTextStyle: .body).scaledFont(for: UIFont.systemFont(ofSize: 16, weight: .regular))
-                return max(40, textHeight(MarkdownTextExtractor.plainText(from: block), width: max(1, width - 41), font: font) + 20)
-            case .code(let codeBlock):
-                let lineCount = max(1, codeBlock.content.split(separator: "\n", omittingEmptySubsequences: false).count)
-                return CGFloat(lineCount) * 18 + 58
-            case .table(let table):
-                return CGFloat(max(1, table.rows.count + (table.header.isEmpty ? 0 : 1))) * 42 + 50
-            case .math:
-                let font = UIFontMetrics(forTextStyle: .body).scaledFont(for: UIFont.systemFont(ofSize: 16, weight: .regular))
-                return max(40, textHeight(MarkdownTextExtractor.plainText(from: block), width: max(1, width - 24), font: font) + 20)
-            case .html:
-                return 120
-            case .image:
-                return 180
-            default:
-                let font = UIFontMetrics(forTextStyle: .body).scaledFont(for: UIFont.systemFont(ofSize: 16, weight: .regular))
-                return max(20, textHeight(MarkdownTextExtractor.plainText(from: block), width: width, font: font))
-            }
+        let cacheKey = "\(document.source.hashValue)_\(width)" as NSString
+        if let cached = heightCache.object(forKey: cacheKey) {
+            return CGFloat(cached.floatValue)
         }
-        let spacing = max(0, CGFloat(max(0, document.blocks.count - 1)) * configuration.theme.spacing.blockSpacing)
-        return max(1, blockHeights.reduce(0, +) + spacing)
+        
+        sizingView.configuration = configuration
+        sizingView.render(document)
+        
+        let targetSize = CGSize(width: width, height: UIView.layoutFittingCompressedSize.height)
+        let size = sizingView.systemLayoutSizeFitting(
+            targetSize,
+            withHorizontalFittingPriority: .required,
+            verticalFittingPriority: .fittingSizeLevel
+        )
+        
+        let totalHeight = ceil(size.height)
+        heightCache.setObject(NSNumber(value: Float(totalHeight)), forKey: cacheKey)
+        return totalHeight
     }
 
     private static func textHeight(_ text: String, width: CGFloat, font: UIFont) -> CGFloat {
@@ -110,10 +95,14 @@ open class MarkdownView: UIView {
         
         var textBlocks: [MarkdownBlock] = []
         
+        var currentBlockIndex = 0
+        
         func flushTextBlocks() {
             guard !textBlocks.isEmpty else { return }
-            let combinedView = TextBlockView(blocks: textBlocks, context: context)
+            let cacheKey = "\(document.source.hashValue)_\(currentBlockIndex)"
+            let combinedView = TextBlockView(blocks: textBlocks, context: context, cacheKey: cacheKey)
             stackView.addArrangedSubview(combinedView)
+            currentBlockIndex += textBlocks.count
             textBlocks.removeAll()
         }
 
@@ -146,10 +135,12 @@ open class MarkdownView: UIView {
             case .image(let imageBlock):
                 blockView = ImageBlockView(imageBlock: imageBlock, context: context)
             default:
+                currentBlockIndex += 1
                 continue
             }
             blockView.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
             stackView.addArrangedSubview(blockView)
+            currentBlockIndex += 1
         }
         flushTextBlocks()
     }
