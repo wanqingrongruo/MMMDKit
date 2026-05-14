@@ -42,7 +42,7 @@ open class MarkdownCollectionViewHost: UIView, UICollectionViewDataSource {
         
         for block in self.document.blocks {
             switch block {
-            case .heading, .paragraph:
+            case .heading, .paragraph, .blockquote, .list:
                 currentTextGroup.append(block)
             default:
                 flushTextGroup()
@@ -124,10 +124,6 @@ open class MarkdownCollectionViewHost: UIView, UICollectionViewDataSource {
 
     private func blockView(for block: MarkdownBlock, context: RenderContext) -> UIView {
         switch block {
-        case .list(let list):
-            return ListBlockView(list: list, context: context)
-        case .blockquote(let blocks):
-            return BlockquoteBlockView(blocks: blocks, context: context)
         case .code(let codeBlock):
             return CollectionMaxWidthBlockContainer(
                 contentView: CodeBlockView(codeBlock: codeBlock, context: context),

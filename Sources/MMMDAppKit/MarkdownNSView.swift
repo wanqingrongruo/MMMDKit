@@ -112,7 +112,7 @@ open class MarkdownNSView: NSView {
 
         for block in document.blocks {
             switch block {
-            case .heading, .paragraph:
+            case .heading, .paragraph, .blockquote, .list:
                 textBlocks.append(block)
                 continue
             default:
@@ -121,10 +121,6 @@ open class MarkdownNSView: NSView {
 
             let blockView: NSView
             switch block {
-            case .list(let list):
-                blockView = ListBlockView(list: list, context: context)
-            case .blockquote(let blocks):
-                blockView = BlockquoteBlockView(blocks: blocks, context: context)
             case .code(let codeBlock):
                 blockView = MarkdownNSMaxWidthBlockContainer(
                     contentView: CodeBlockView(codeBlock: codeBlock, context: context),

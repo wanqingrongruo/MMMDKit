@@ -119,19 +119,15 @@ open class MarkdownView: UIView {
 
         for block in document.blocks {
             switch block {
-            case .heading, .paragraph:
+            case .heading, .paragraph, .blockquote, .list:
                 textBlocks.append(block)
                 continue
             default:
                 flushTextBlocks()
             }
-            
+
             let blockView: UIView
             switch block {
-            case .list(let list):
-                blockView = ListBlockView(list: list, context: context)
-            case .blockquote(let blocks):
-                blockView = BlockquoteBlockView(blocks: blocks, context: context)
             case .code(let codeBlock):
                 blockView = UIKitMaxWidthBlockContainer(
                     contentView: CodeBlockView(codeBlock: codeBlock, context: context),
