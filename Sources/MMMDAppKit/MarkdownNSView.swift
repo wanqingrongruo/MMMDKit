@@ -99,13 +99,28 @@ open class MarkdownNSView: NSView {
             imageLoader: configuration.imageLoader,
             codeBlockMaximumWidth: configuration.codeBlockMaximumWidth
         )
+
+        var textBlocks: [MarkdownBlock] = []
+
+        func flushTextBlocks() {
+            guard !textBlocks.isEmpty else { return }
+            let combinedView = TextBlockView(blocks: textBlocks, context: context)
+            combinedView.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+            stackView.addArrangedSubview(combinedView)
+            textBlocks.removeAll()
+        }
+
         for block in document.blocks {
+            switch block {
+            case .heading, .paragraph:
+                textBlocks.append(block)
+                continue
+            default:
+                flushTextBlocks()
+            }
+
             let blockView: NSView
             switch block {
-            case .heading(let level, let content):
-                blockView = HeadingBlockView(level: level, content: content, context: context)
-            case .paragraph(let content):
-                blockView = ParagraphBlockView(content: content, context: context)
             case .list(let list):
                 blockView = ListBlockView(list: list, context: context)
             case .blockquote(let blocks):
@@ -133,6 +148,7 @@ open class MarkdownNSView: NSView {
             blockView.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
             stackView.addArrangedSubview(blockView)
         }
+        flushTextBlocks()
     }
 }
 

@@ -4,7 +4,13 @@ import MMMDCore
 import AppKit
 
 open class MarkdownCollectionViewHost: NSView, NSCollectionViewDataSource, NSCollectionViewDelegateFlowLayout {
+    private enum RenderableItem {
+        case single(MarkdownBlock)
+        case textGroup([MarkdownBlock])
+    }
+
     private var document = MarkdownDocument(blocks: [])
+    private var renderableItems: [RenderableItem] = []
     private var configuration = MarkdownConfiguration()
     private let collectionView = NSCollectionView()
     private let scrollView = NSScrollView()
@@ -23,12 +29,35 @@ open class MarkdownCollectionViewHost: NSView, NSCollectionViewDataSource, NSCol
     open func render(_ document: MarkdownDocument, configuration: MarkdownConfiguration = .init()) {
         self.configuration = configuration
         self.document = (try? configuration.transformedDocument(document)) ?? document
+        
+        var items: [RenderableItem] = []
+        var currentTextGroup: [MarkdownBlock] = []
+        
+        func flushTextGroup() {
+            if !currentTextGroup.isEmpty {
+                items.append(.textGroup(currentTextGroup))
+                currentTextGroup.removeAll()
+            }
+        }
+        
+        for block in self.document.blocks {
+            switch block {
+            case .heading, .paragraph:
+                currentTextGroup.append(block)
+            default:
+                flushTextGroup()
+                items.append(.single(block))
+            }
+        }
+        flushTextGroup()
+        self.renderableItems = items
+        
         collectionLayout.invalidateLayout()
         collectionView.reloadData()
     }
 
     public func collectionView(_ collectionView: NSCollectionView, numberOfItemsInSection section: Int) -> Int {
-        document.blocks.count
+        renderableItems.count
     }
 
     public func collectionView(_ collectionView: NSCollectionView, itemForRepresentedObjectAt indexPath: IndexPath) -> NSCollectionViewItem {
@@ -44,7 +73,16 @@ open class MarkdownCollectionViewHost: NSView, NSCollectionViewDataSource, NSCol
             imageLoader: configuration.imageLoader,
             codeBlockMaximumWidth: configuration.codeBlockMaximumWidth
         )
-        item.host(blockView(for: document.blocks[indexPath.item], context: context))
+        
+        let blockView: NSView
+        switch renderableItems[indexPath.item] {
+        case .single(let block):
+            blockView = self.blockView(for: block, context: context)
+        case .textGroup(let blocks):
+            blockView = TextBlockView(blocks: blocks, context: context)
+        }
+        
+        item.host(blockView)
         return item
     }
 
@@ -84,16 +122,22 @@ open class MarkdownCollectionViewHost: NSView, NSCollectionViewDataSource, NSCol
     ) -> NSSize {
         let visibleWidth = collectionView.enclosingScrollView?.contentView.bounds.width ?? collectionView.bounds.width
         let width = max(1, visibleWidth)
-        let height = height(for: document.blocks[indexPath.item], width: width)
+        let item = renderableItems[indexPath.item]
+        
+        let height: CGFloat
+        switch item {
+        case .single(let block):
+            height = self.height(for: block, width: width)
+        case .textGroup(let blocks):
+            let heights = blocks.map { self.height(for: $0, width: width) }
+            let spacing = max(0, CGFloat(max(0, blocks.count - 1)) * configuration.theme.spacing.blockSpacing)
+            height = heights.reduce(0, +) + spacing
+        }
         return NSSize(width: width, height: height)
     }
 
     private func blockView(for block: MarkdownBlock, context: RenderContext) -> NSView {
         switch block {
-        case .heading(let level, let content):
-            return HeadingBlockView(level: level, content: content, context: context)
-        case .paragraph(let content):
-            return ParagraphBlockView(content: content, context: context)
         case .list(let list):
             return ListBlockView(list: list, context: context)
         case .blockquote(let blocks):

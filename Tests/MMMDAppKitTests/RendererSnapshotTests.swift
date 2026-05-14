@@ -23,7 +23,7 @@ final class RendererSnapshotTests: XCTestCase {
         let hierarchy = buildViewHierarchyString(view)
         print("HIERARCHY:\\n\\(hierarchy)")
         
-        XCTAssertTrue(hierarchy.contains("ParagraphBlockView") || hierarchy.contains("NSTextField"), "Should contain heading and paragraph text fields")
+        XCTAssertTrue(hierarchy.contains("TextBlockView") || hierarchy.contains("NSTextView"), "Should contain text block view")
         XCTAssertTrue(hierarchy.contains("NSStackView"), "Should use a stack view for vertical layout")
     }
     

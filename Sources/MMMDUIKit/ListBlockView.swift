@@ -11,7 +11,7 @@ final class ListBlockView: UIStackView {
         isAccessibilityElement = false
 
         for (index, item) in list.items.enumerated() {
-            addArrangedSubview(Self.row(marker: Self.marker(for: list.style, index: index), item: item))
+            addArrangedSubview(Self.row(marker: Self.marker(for: list.style, index: index), item: item, context: context))
         }
     }
 
@@ -19,7 +19,7 @@ final class ListBlockView: UIStackView {
         super.init(coder: coder)
     }
 
-    private static func row(marker: String, item: ListItem) -> UIView {
+    private static func row(marker: String, item: ListItem, context: RenderContext) -> UIView {
         let row = UIStackView()
         row.axis = .horizontal
         row.alignment = .firstBaseline
@@ -33,14 +33,8 @@ final class ListBlockView: UIStackView {
         markerLabel.text = marker
         markerLabel.widthAnchor.constraint(greaterThanOrEqualToConstant: 24).isActive = true
 
-        let contentLabel = UILabel()
-        contentLabel.numberOfLines = 0
-        contentLabel.font = font
-        contentLabel.textColor = .label
-        contentLabel.text = item.blocks.map(MarkdownTextExtractor.plainText(from:)).joined(separator: "\n")
+        let contentLabel = TextBlockView(blocks: item.blocks, context: context)
         contentLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
-        contentLabel.isAccessibilityElement = true
-        contentLabel.accessibilityLabel = "\(marker) \(contentLabel.text ?? "")"
 
         row.addArrangedSubview(markerLabel)
         row.addArrangedSubview(contentLabel)

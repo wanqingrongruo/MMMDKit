@@ -4,7 +4,13 @@ import MMMDCore
 import UIKit
 
 open class MarkdownCollectionViewHost: UIView, UICollectionViewDataSource {
+    private enum RenderableItem {
+        case single(MarkdownBlock)
+        case textGroup([MarkdownBlock])
+    }
+
     private var document = MarkdownDocument(blocks: [])
+    private var renderableItems: [RenderableItem] = []
     private var configuration = MarkdownConfiguration()
     private let collectionView: UICollectionView
 
@@ -23,6 +29,29 @@ open class MarkdownCollectionViewHost: UIView, UICollectionViewDataSource {
     open func render(_ document: MarkdownDocument, configuration: MarkdownConfiguration = .init()) {
         self.configuration = configuration
         self.document = (try? configuration.transformedDocument(document)) ?? document
+        
+        var items: [RenderableItem] = []
+        var currentTextGroup: [MarkdownBlock] = []
+        
+        func flushTextGroup() {
+            if !currentTextGroup.isEmpty {
+                items.append(.textGroup(currentTextGroup))
+                currentTextGroup.removeAll()
+            }
+        }
+        
+        for block in self.document.blocks {
+            switch block {
+            case .heading, .paragraph:
+                currentTextGroup.append(block)
+            default:
+                flushTextGroup()
+                items.append(.single(block))
+            }
+        }
+        flushTextGroup()
+        self.renderableItems = items
+        
         collectionView.reloadData()
     }
 
@@ -32,7 +61,7 @@ open class MarkdownCollectionViewHost: UIView, UICollectionViewDataSource {
     }
 
     public func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
-        document.blocks.count
+        renderableItems.count
     }
 
     public func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
@@ -48,7 +77,16 @@ open class MarkdownCollectionViewHost: UIView, UICollectionViewDataSource {
             imageLoader: configuration.imageLoader,
             codeBlockMaximumWidth: configuration.codeBlockMaximumWidth
         )
-        cell.host(blockView(for: document.blocks[indexPath.item], context: context))
+        
+        let blockView: UIView
+        switch renderableItems[indexPath.item] {
+        case .single(let block):
+            blockView = self.blockView(for: block, context: context)
+        case .textGroup(let blocks):
+            blockView = TextBlockView(blocks: blocks, context: context)
+        }
+        
+        cell.host(blockView)
         return cell
     }
 
@@ -86,10 +124,6 @@ open class MarkdownCollectionViewHost: UIView, UICollectionViewDataSource {
 
     private func blockView(for block: MarkdownBlock, context: RenderContext) -> UIView {
         switch block {
-        case .heading(let level, let content):
-            return HeadingBlockView(level: level, content: content, context: context)
-        case .paragraph(let content):
-            return ParagraphBlockView(content: content, context: context)
         case .list(let list):
             return ListBlockView(list: list, context: context)
         case .blockquote(let blocks):

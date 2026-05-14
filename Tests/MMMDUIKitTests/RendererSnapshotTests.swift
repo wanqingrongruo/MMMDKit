@@ -20,7 +20,7 @@ final class UIKitRendererSnapshotTests: XCTestCase {
         
         let hierarchy = buildViewHierarchyString(view)
         
-        XCTAssertTrue(hierarchy.contains("ParagraphBlockView") || hierarchy.contains("UILabel"), "Should contain heading and paragraph labels")
+        XCTAssertTrue(hierarchy.contains("TextBlockView") || hierarchy.contains("UITextView"), "Should contain text block view")
         XCTAssertTrue(hierarchy.contains("UIStackView"), "Should use a stack view for vertical layout")
     }
     

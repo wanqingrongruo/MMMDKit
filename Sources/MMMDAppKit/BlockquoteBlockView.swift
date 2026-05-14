@@ -17,25 +17,21 @@ final class BlockquoteBlockView: NSView {
         indicator.layer?.backgroundColor = NSColor.secondaryLabelColor.cgColor
         indicator.translatesAutoresizingMaskIntoConstraints = false
 
-        let label = NSTextField(wrappingLabelWithString: blocks.map(MarkdownTextExtractor.plainText(from:)).joined(separator: "\n"))
-        label.font = .preferredFont(forTextStyle: .body)
-        label.textColor = .secondaryLabelColor
-        label.translatesAutoresizingMaskIntoConstraints = false
-        label.setAccessibilityElement(true)
-        label.setAccessibilityLabel(label.stringValue)
-
+        let textBlockView = TextBlockView(blocks: blocks, context: context, textColor: .secondaryLabelColor)
+        textBlockView.translatesAutoresizingMaskIntoConstraints = false
+        
         addSubview(indicator)
-        addSubview(label)
+        addSubview(textBlockView)
         NSLayoutConstraint.activate([
             indicator.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 10),
             indicator.topAnchor.constraint(equalTo: topAnchor, constant: 10),
             indicator.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -10),
             indicator.widthAnchor.constraint(equalToConstant: 3),
 
-            label.leadingAnchor.constraint(equalTo: indicator.trailingAnchor, constant: 10),
-            label.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -12),
-            label.topAnchor.constraint(equalTo: topAnchor, constant: 10),
-            label.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -10)
+            textBlockView.leadingAnchor.constraint(equalTo: indicator.trailingAnchor, constant: 10),
+            textBlockView.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -12),
+            textBlockView.topAnchor.constraint(equalTo: topAnchor, constant: 10),
+            textBlockView.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -10)
         ])
     }
 

@@ -12,7 +12,7 @@ final class ListBlockView: NSStackView {
         setAccessibilityElement(false)
 
         for (index, item) in list.items.enumerated() {
-            addArrangedSubview(Self.row(marker: Self.marker(for: list.style, index: index), item: item))
+            addArrangedSubview(Self.row(marker: Self.marker(for: list.style, index: index), item: item, context: context))
         }
     }
 
@@ -20,7 +20,7 @@ final class ListBlockView: NSStackView {
         super.init(coder: coder)
     }
 
-    private static func row(marker: String, item: ListItem) -> NSView {
+    private static func row(marker: String, item: ListItem, context: RenderContext) -> NSView {
         let row = NSStackView()
         row.orientation = .horizontal
         row.alignment = .firstBaseline
@@ -31,11 +31,8 @@ final class ListBlockView: NSStackView {
         markerLabel.textColor = .secondaryLabelColor
         markerLabel.widthAnchor.constraint(greaterThanOrEqualToConstant: 24).isActive = true
 
-        let contentLabel = NSTextField(wrappingLabelWithString: item.blocks.map(MarkdownTextExtractor.plainText(from:)).joined(separator: "\n"))
-        contentLabel.font = .preferredFont(forTextStyle: .body)
-        contentLabel.textColor = .labelColor
-        contentLabel.setAccessibilityElement(true)
-        contentLabel.setAccessibilityLabel("\(marker) \(contentLabel.stringValue)")
+        let contentLabel = TextBlockView(blocks: item.blocks, context: context)
+        contentLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
 
         row.addArrangedSubview(markerLabel)
         row.addArrangedSubview(contentLabel)
