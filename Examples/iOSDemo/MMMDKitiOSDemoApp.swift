@@ -336,7 +336,7 @@ extension DemoMarkdownViewController: UICollectionViewDataSource, UICollectionVi
 
     func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
         let cell = collectionView.dequeueReusableCell(withReuseIdentifier: ChatMessageCell.reuseIdentifier, for: indexPath) as? ChatMessageCell ?? ChatMessageCell()
-        cell.configure(message: messages[indexPath.item], configuration: configuration)
+        cell.configure(message: messages[indexPath.item], configuration: configuration, containerWidth: collectionView.bounds.width)
         return cell
     }
 
@@ -385,8 +385,8 @@ private final class ChatMessageCell: UICollectionViewCell {
         return attributes
     }
 
-    func configure(message: DemoChatMessage, configuration: MarkdownConfiguration) {
-        bubble.configure(message: message, configuration: configuration)
+    func configure(message: DemoChatMessage, configuration: MarkdownConfiguration, containerWidth: CGFloat) {
+        bubble.configure(message: message, configuration: configuration, containerWidth: containerWidth)
     }
 }
 
@@ -399,6 +399,7 @@ private final class ChatMessageBubbleView: UIView {
     private var currentMessageID: String?
     private var maxBubbleWidth: CGFloat = 0
     private var minWidthConstraint: NSLayoutConstraint?
+    private var maxWidthConstraint: NSLayoutConstraint?
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -410,7 +411,7 @@ private final class ChatMessageBubbleView: UIView {
         setupView()
     }
 
-    func configure(message: DemoChatMessage, configuration: MarkdownConfiguration) {
+    func configure(message: DemoChatMessage, configuration: MarkdownConfiguration, containerWidth: CGFloat) {
         if message.id != currentMessageID {
             currentMessageID = message.id
             maxBubbleWidth = 0
@@ -423,9 +424,15 @@ private final class ChatMessageBubbleView: UIView {
         markdownView.render(message.document)
         markdownView.invalidateIntrinsicContentSize()
         
-        let size = bubbleView.systemLayoutSizeFitting(UIView.layoutFittingCompressedSize)
-        if size.width > maxBubbleWidth {
-            maxBubbleWidth = size.width
+        maxWidthConstraint?.isActive = false
+        let unconstrainedSize = bubbleView.systemLayoutSizeFitting(UIView.layoutFittingCompressedSize)
+        maxWidthConstraint?.isActive = true
+        
+        let allowedMaxWidth = containerWidth * 0.9
+        let targetWidth = min(unconstrainedSize.width, allowedMaxWidth)
+        
+        if targetWidth > maxBubbleWidth {
+            maxBubbleWidth = targetWidth
             minWidthConstraint?.isActive = false
             let constraint = bubbleView.widthAnchor.constraint(greaterThanOrEqualToConstant: maxBubbleWidth)
             constraint.priority = UILayoutPriority(999)
@@ -470,11 +477,14 @@ private final class ChatMessageBubbleView: UIView {
 
         let bubbleBottomConstraint = bubbleView.bottomAnchor.constraint(equalTo: bottomAnchor)
         bubbleBottomConstraint.priority = .init(999)
+        
+        let maxWidthConst = bubbleView.widthAnchor.constraint(lessThanOrEqualTo: widthAnchor, multiplier: 0.9)
+        maxWidthConstraint = maxWidthConst
 
         NSLayoutConstraint.activate([
             bubbleView.topAnchor.constraint(equalTo: topAnchor),
             bubbleBottomConstraint,
-            bubbleView.widthAnchor.constraint(lessThanOrEqualTo: widthAnchor, multiplier: 0.9),
+            maxWidthConst,
 
             titleLabel.leadingAnchor.constraint(equalTo: bubbleView.leadingAnchor, constant: 14),
             titleLabel.trailingAnchor.constraint(lessThanOrEqualTo: bubbleView.trailingAnchor, constant: -14),
