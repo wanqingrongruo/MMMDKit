@@ -1,4 +1,4 @@
-# childPlay
+# MMMDKIT
 
 这个仓库同时包含 MMMDKit 库源码和独立 Demo 工程。仓库根目录只负责组织项目；真正的 Swift Package 位于 `MMMDKit/`。
 
