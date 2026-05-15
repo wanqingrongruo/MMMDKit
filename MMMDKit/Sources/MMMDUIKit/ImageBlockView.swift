@@ -4,15 +4,23 @@ import MMMDCore
 import UIKit
 
 public final class ImageBlockView: UIImageView {
+    private var imageBlock: ImageBlock?
+    private var actions: MarkdownActions?
+
     public static func exactHeight(for imageBlock: ImageBlock, width: CGFloat, context: RenderContext) -> CGFloat {
         return 200
     }
+
     public init(imageBlock: ImageBlock, context: RenderContext) {
+        self.imageBlock = imageBlock
+        actions = context.actions
         super.init(frame: .zero)
         mmmdSuppressTextViewAttachmentSelection()
         contentMode = .scaleAspectFit
+        isUserInteractionEnabled = true
         isAccessibilityElement = true
         accessibilityLabel = imageBlock.alt
+        addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(imageTapped)))
         load(imageBlock, context: context)
     }
 
@@ -32,6 +40,13 @@ public final class ImageBlockView: UIImageView {
                 self.image = image
             }
         }
+    }
+
+    @objc private func imageTapped() {
+        guard let imageBlock else {
+            return
+        }
+        actions?.onImageTap?(imageBlock)
     }
 }
 #endif

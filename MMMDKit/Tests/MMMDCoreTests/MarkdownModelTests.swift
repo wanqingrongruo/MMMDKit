@@ -167,6 +167,33 @@ final class MarkdownModelTests: XCTestCase {
         XCTAssertEqual(math.latex, "x^2 + y^2")
     }
 
+    func testParserCreatesImageBlock() throws {
+        let parser = CmarkMarkdownParser()
+        let document = try parser.parse("![Diagram](mmmd-demo://image/architecture)", options: .init())
+
+        guard case .image(let image) = document.blocks.first else {
+            return XCTFail("Expected image block")
+        }
+
+        XCTAssertEqual(image.alt, "Diagram")
+        XCTAssertEqual(image.url, URL(string: "mmmd-demo://image/architecture"))
+    }
+
+    func testParserKeepsInlineImageInParagraph() throws {
+        let parser = CmarkMarkdownParser()
+        let document = try parser.parse("查看 ![Preview](mmmd-demo://image/preview) 图片", options: .init())
+
+        guard case .paragraph(let content) = document.blocks.first else {
+            return XCTFail("Expected paragraph block")
+        }
+
+        XCTAssertEqual(content.nodes, [
+            .text("查看 "),
+            .image(alt: "Preview", url: URL(string: "mmmd-demo://image/preview")),
+            .text(" 图片")
+        ])
+    }
+
     func testCopyPayloadUsesOriginalMarkdownSource() throws {
         let parser = CmarkMarkdownParser()
         let source = "# Title"

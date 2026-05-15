@@ -116,6 +116,8 @@ public struct MarkdownActions: Sendable {
     public var onDownloadTable: (@Sendable (_ text: String) -> Void)?
     /// 当用户点击表格的放大（全屏）按钮时触发
     public var onExpandTable: (@Sendable (_ text: String) -> Void)?
+    /// 当用户点击图片块时触发，业务侧可在此实现大图预览、保存或自定义浏览器
+    public var onImageTap: (@Sendable (_ image: ImageBlock) -> Void)?
 
     /// 当视图内的动态内容（如异步图片加载完毕、公式渲染完成）导致容器高度发生变化时触发
     public var onHeightChange: (@Sendable (Double) -> Void)?
@@ -128,6 +130,7 @@ public struct MarkdownActions: Sendable {
         onCopyTable: (@Sendable (_ text: String) -> Void)? = nil,
         onDownloadTable: (@Sendable (_ text: String) -> Void)? = nil,
         onExpandTable: (@Sendable (_ text: String) -> Void)? = nil,
+        onImageTap: (@Sendable (_ image: ImageBlock) -> Void)? = nil,
         onHeightChange: (@Sendable (Double) -> Void)? = nil
     ) {
         self.onLinkTap = onLinkTap
@@ -137,6 +140,7 @@ public struct MarkdownActions: Sendable {
         self.onCopyTable = onCopyTable
         self.onDownloadTable = onDownloadTable
         self.onExpandTable = onExpandTable
+        self.onImageTap = onImageTap
         self.onHeightChange = onHeightChange
     }
 }

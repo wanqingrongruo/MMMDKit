@@ -10,6 +10,19 @@ enum CmarkInlineFallbackParser {
         var remaining = text
 
         while !remaining.isEmpty {
+            if remaining.hasPrefix("!["),
+               let titleEnd = remaining.firstIndex(of: "]"),
+               titleEnd < remaining.index(before: remaining.endIndex),
+               remaining[remaining.index(after: titleEnd)] == "(",
+               let urlEnd = remaining[remaining.index(titleEnd, offsetBy: 2)...].firstIndex(of: ")") {
+                let alt = remaining[remaining.index(remaining.startIndex, offsetBy: 2)..<titleEnd]
+                let urlStart = remaining.index(titleEnd, offsetBy: 2)
+                let urlText = String(remaining[urlStart..<urlEnd])
+                nodes.append(.init(type: .image(alt: String(alt), url: URL(string: urlText))))
+                remaining = remaining[remaining.index(after: urlEnd)...]
+                continue
+            }
+
             if remaining.hasPrefix("["),
                let titleEnd = remaining.firstIndex(of: "]"),
                titleEnd < remaining.index(before: remaining.endIndex),
@@ -49,9 +62,10 @@ enum CmarkInlineFallbackParser {
 
             let nextStrong = remaining.range(of: "**")?.lowerBound
             let nextEmphasis = remaining.dropFirst().firstIndex(of: "*")
+            let nextImage = remaining.range(of: "![")?.lowerBound
             let nextLink = remaining.firstIndex(of: "[")
             let nextMath = remaining.firstIndex(of: "$")
-            let nextMarker = [nextStrong, nextEmphasis, nextLink, nextMath].compactMap { $0 }.min()
+            let nextMarker = [nextStrong, nextEmphasis, nextImage, nextLink, nextMath].compactMap { $0 }.min()
             let end = nextMarker ?? remaining.endIndex
             nodes.append(.init(type: .text(String(remaining[..<end]))))
             remaining = remaining[end...]

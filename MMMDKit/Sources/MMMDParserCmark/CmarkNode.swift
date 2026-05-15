@@ -18,6 +18,7 @@ enum CmarkNodeType: Equatable {
     case emphasis
     case strong
     case link(destination: URL?)
+    case image(alt: String, url: URL?)
     case codeBlock(language: String?, content: String)
     case thematicBreak
 }

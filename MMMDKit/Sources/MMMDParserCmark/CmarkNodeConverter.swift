@@ -29,7 +29,11 @@ enum CmarkNodeConverter {
         case .document:
             return nil
         case .paragraph:
-            return .paragraph(.init(inlines(from: node.children)))
+            let inlineNodes = inlines(from: node.children)
+            if inlineNodes.count == 1, case .image(let alt, let url) = inlineNodes[0] {
+                return .image(.init(alt: alt, url: url))
+            }
+            return .paragraph(.init(inlineNodes))
         case .heading(let level):
             return .heading(level: level, content: .init(inlines(from: node.children)))
         case .blockquote:
@@ -44,7 +48,7 @@ enum CmarkNodeConverter {
             return .code(.init(language: language, content: content))
         case .thematicBreak:
             return .thematicBreak
-        case .tableRow, .tableCell, .listItem, .text, .inlineMath, .emphasis, .strong, .link:
+        case .tableRow, .tableCell, .listItem, .text, .inlineMath, .emphasis, .strong, .link, .image:
             return nil
         }
     }
@@ -101,6 +105,8 @@ enum CmarkNodeConverter {
                 return .strong(inlines(from: node.children))
             case .link(let destination):
                 return .link(text: inlines(from: node.children), url: destination)
+            case .image(let alt, let url):
+                return .image(alt: alt, url: url)
             default:
                 return nil
             }

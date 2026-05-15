@@ -99,6 +99,7 @@ final class DemoMarkdownViewController: NSViewController, NSCollectionViewDataSo
     private var streamingIndex = 0
     private var streamingConversationIndex = 0
     private var currentStreamingAssistantID: String?
+    private var previewWindows: [NSWindow] = []
 
     override func loadView() {
         view = NSView()
@@ -142,12 +143,63 @@ final class DemoMarkdownViewController: NSViewController, NSCollectionViewDataSo
                 },
                 onCopyCode: { _, _ in
                     NSLog("已复制代码块")
+                },
+                onImageTap: { [weak self] imageBlock in
+                    Task { @MainActor in
+                        self?.presentImagePreview(for: imageBlock)
+                    }
                 }
             ),
             codeHighlighter: KeywordCodeHighlighter(),
+            imageLoader: DemoImageLoader(),
             codeBlockMaximumWidth: 640
         )
         showChatFeed()
+    }
+
+    private func presentImagePreview(for imageBlock: ImageBlock) {
+        guard let url = imageBlock.url, let imageLoader = configuration.imageLoader else {
+            return
+        }
+
+        Task {
+            guard
+                let data = try? await imageLoader.loadImageData(from: url),
+                let image = NSImage(data: data)
+            else {
+                return
+            }
+
+            await MainActor.run {
+                let imageView = NSImageView()
+                imageView.image = image
+                imageView.imageScaling = .scaleProportionallyUpOrDown
+                imageView.translatesAutoresizingMaskIntoConstraints = false
+
+                let contentView = NSView(frame: NSRect(x: 0, y: 0, width: 760, height: 460))
+                contentView.wantsLayer = true
+                contentView.layer?.backgroundColor = NSColor.black.cgColor
+                contentView.addSubview(imageView)
+                NSLayoutConstraint.activate([
+                    imageView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 20),
+                    imageView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -20),
+                    imageView.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 20),
+                    imageView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -20)
+                ])
+
+                let window = NSWindow(
+                    contentRect: NSRect(x: 0, y: 0, width: 760, height: 460),
+                    styleMask: [.titled, .closable, .resizable],
+                    backing: .buffered,
+                    defer: false
+                )
+                window.title = imageBlock.alt.isEmpty ? "图片预览" : imageBlock.alt
+                window.contentView = contentView
+                window.center()
+                window.makeKeyAndOrderFront(nil)
+                self.previewWindows.append(window)
+            }
+        }
     }
 
     deinit {
@@ -312,6 +364,52 @@ final class DemoMarkdownViewController: NSViewController, NSCollectionViewDataSo
     override func viewDidLayout() {
         super.viewDidLayout()
         transcriptLayout.invalidateLayout()
+    }
+}
+
+private final class DemoImageLoader: ImageLoader, @unchecked Sendable {
+    func loadImageData(from url: URL) async throws -> Data {
+        guard url.scheme == "mmmd-demo" else {
+            return try Data(contentsOf: url)
+        }
+
+        let title = url.lastPathComponent == "architecture" ? "MMMDKit" : "Image Block"
+        let subtitle = url.lastPathComponent == "architecture" ? "Parser -> Model -> Native View" : "Local Demo ImageLoader"
+        let image = NSImage(size: NSSize(width: 720, height: 360))
+        image.lockFocus()
+        NSColor(red: 0.07, green: 0.12, blue: 0.22, alpha: 1).setFill()
+        NSBezierPath(rect: NSRect(x: 0, y: 0, width: 720, height: 360)).fill()
+
+        NSColor(red: 0.18, green: 0.42, blue: 0.92, alpha: 1).setFill()
+        NSBezierPath(roundedRect: NSRect(x: 48, y: 56, width: 624, height: 248), xRadius: 32, yRadius: 32).fill()
+
+        NSColor(red: 0.41, green: 0.76, blue: 1, alpha: 1).setFill()
+        NSBezierPath(ovalIn: NSRect(x: 520, y: 184, width: 140, height: 140)).fill()
+
+        (title as NSString).draw(
+            in: NSRect(x: 84, y: 184, width: 552, height: 72),
+            withAttributes: [
+                .font: NSFont.systemFont(ofSize: 48, weight: .bold),
+                .foregroundColor: NSColor.white
+            ]
+        )
+        (subtitle as NSString).draw(
+            in: NSRect(x: 86, y: 124, width: 552, height: 48),
+            withAttributes: [
+                .font: NSFont.systemFont(ofSize: 25, weight: .medium),
+                .foregroundColor: NSColor.white.withAlphaComponent(0.86)
+            ]
+        )
+        image.unlockFocus()
+
+        guard
+            let tiffData = image.tiffRepresentation,
+            let bitmap = NSBitmapImageRep(data: tiffData),
+            let pngData = bitmap.representation(using: .png, properties: [:])
+        else {
+            throw URLError(.cannotDecodeContentData)
+        }
+        return pngData
     }
 }
 

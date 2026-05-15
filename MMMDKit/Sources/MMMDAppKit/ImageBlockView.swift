@@ -4,11 +4,17 @@ import MMMDCore
 import AppKit
 
 final class ImageBlockView: NSImageView {
+    private var imageBlock: ImageBlock?
+    private var actions: MarkdownActions?
+
     init(imageBlock: ImageBlock, context: RenderContext) {
+        self.imageBlock = imageBlock
+        actions = context.actions
         super.init(frame: .zero)
         imageScaling = .scaleProportionallyUpOrDown
         setAccessibilityElement(true)
         setAccessibilityLabel(imageBlock.alt)
+        addGestureRecognizer(NSClickGestureRecognizer(target: self, action: #selector(imageClicked)))
         load(imageBlock, context: context)
     }
 
@@ -28,6 +34,13 @@ final class ImageBlockView: NSImageView {
                 self.image = image
             }
         }
+    }
+
+    @objc private func imageClicked() {
+        guard let imageBlock else {
+            return
+        }
+        actions?.onImageTap?(imageBlock)
     }
 }
 #endif

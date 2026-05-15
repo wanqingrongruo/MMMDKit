@@ -19,7 +19,7 @@ enum DemoMarkdownSamples {
     static let richMarkdown = """
     # MMMDKit 复杂 Markdown 示例
 
-    这份测试数据覆盖段落、**粗体**、*斜体*、链接、列表、引用、代码块、表格和数学公式。
+    这份测试数据覆盖段落、**粗体**、*斜体*、链接、列表、引用、代码块、表格、图片和数学公式。
 
     访问 [GitHub](https://github.com/wanqingrongruo/MMMDKit) 查看项目。
 
@@ -47,7 +47,14 @@ enum DemoMarkdownSamples {
     | Markdown Parser | 已接入 |
     | 代码高亮 | 已接入 |
     | 表格 | 已接入 |
+    | 图片 | 已接入 |
     | LaTeX | 已接入 |
+
+    ## 图片
+
+    下面是一张由 Demo ImageLoader 本地生成的图片，用于验证 Markdown 图片语法和图片块渲染：
+
+    ![MMMDKit 架构示意图](mmmd-demo://image/architecture)
 
     ## 数学公式
 
@@ -184,7 +191,9 @@ enum DemoMarkdownSamples {
         
         ---
 
-        不仅如此，长表格我们支持了**原生的水平滚动**，告别页面被撑爆的烦恼。
+        不仅如此，长表格我们支持了**原生的水平滚动**，图片块也可以通过 `ImageLoader` 统一接入本地资源、缓存或网络加载。
+
+        ![MMMDKit 图片渲染示例](mmmd-demo://image/image-block)
         """,
         """
         ### 06
