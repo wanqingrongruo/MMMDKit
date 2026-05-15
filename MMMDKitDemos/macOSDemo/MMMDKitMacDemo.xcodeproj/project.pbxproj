@@ -1,0 +1,362 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		1270727243F082D02DB29FCA /* DemoMarkdownSamples.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03BDCB50972711FD5C1C903 /* DemoMarkdownSamples.swift */; };
+		24F2A0010000000000000001 /* MMMDCore in Frameworks */ = {isa = PBXBuildFile; productRef = 24F2B0010000000000000001 /* MMMDCore */; };
+		24F2A0010000000000000002 /* MMMDParserCmark in Frameworks */ = {isa = PBXBuildFile; productRef = 24F2B0010000000000000002 /* MMMDParserCmark */; };
+		24F2A0010000000000000003 /* MMMDStreaming in Frameworks */ = {isa = PBXBuildFile; productRef = 24F2B0010000000000000003 /* MMMDStreaming */; };
+		24F2A0010000000000000004 /* MMMDHighlighter in Frameworks */ = {isa = PBXBuildFile; productRef = 24F2B0010000000000000004 /* MMMDHighlighter */; };
+		24F2A0010000000000000005 /* MMMDAppKit in Frameworks */ = {isa = PBXBuildFile; productRef = 24F2B0010000000000000005 /* MMMDAppKit */; };
+		B4B3A3287EC9321282EE1351 /* MMMDKitMacDemoApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 695D18B43E2E4E6E49EBD373 /* MMMDKitMacDemoApp.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		695D18B43E2E4E6E49EBD373 /* MMMDKitMacDemoApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MMMDKitMacDemoApp.swift; sourceTree = "<group>"; };
+		69D1ACCAEC197767E1BCCDD5 /* MMMDKitMacDemo.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MMMDKitMacDemo.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		D03BDCB50972711FD5C1C903 /* DemoMarkdownSamples.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoMarkdownSamples.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		D50701B3FF3620260A5C6C0D /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				24F2A0010000000000000001 /* MMMDCore in Frameworks */,
+				24F2A0010000000000000002 /* MMMDParserCmark in Frameworks */,
+				24F2A0010000000000000003 /* MMMDStreaming in Frameworks */,
+				24F2A0010000000000000004 /* MMMDHighlighter in Frameworks */,
+				24F2A0010000000000000005 /* MMMDAppKit in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		5063140AC56EE51700AD4087 /* Shared */ = {
+			isa = PBXGroup;
+			children = (
+				D03BDCB50972711FD5C1C903 /* DemoMarkdownSamples.swift */,
+			);
+			name = Shared;
+			path = ../Shared;
+			sourceTree = "<group>";
+		};
+		631A547D8B2D58AE64BE9979 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		AECCA5E910CCDB9BEB2B0C0F /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				69D1ACCAEC197767E1BCCDD5 /* MMMDKitMacDemo.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		CB1F6A5631AC997E7D6FAB73 = {
+			isa = PBXGroup;
+			children = (
+				695D18B43E2E4E6E49EBD373 /* MMMDKitMacDemoApp.swift */,
+				5063140AC56EE51700AD4087 /* Shared */,
+				AECCA5E910CCDB9BEB2B0C0F /* Products */,
+				631A547D8B2D58AE64BE9979 /* Frameworks */,
+			);
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		B22D8FCDCF771A90BBFD3394 /* MMMDKitMacDemo */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 12B233C1B35782B41F504214 /* Build configuration list for PBXNativeTarget "MMMDKitMacDemo" */;
+			buildPhases = (
+				ABF9E6028D772F39B276A0CB /* Sources */,
+				D50701B3FF3620260A5C6C0D /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = MMMDKitMacDemo;
+			packageProductDependencies = (
+				24F2B0010000000000000001 /* MMMDCore */,
+				24F2B0010000000000000002 /* MMMDParserCmark */,
+				24F2B0010000000000000003 /* MMMDStreaming */,
+				24F2B0010000000000000004 /* MMMDHighlighter */,
+				24F2B0010000000000000005 /* MMMDAppKit */,
+			);
+			productName = MMMDKitMacDemo;
+			productReference = 69D1ACCAEC197767E1BCCDD5 /* MMMDKitMacDemo.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		B548FD4C031F961C9E21AA89 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					B22D8FCDCF771A90BBFD3394 = {
+						DevelopmentTeam = "";
+					};
+				};
+			};
+			buildConfigurationList = 77AFC25173AA86B7D4102017 /* Build configuration list for PBXProject "MMMDKitMacDemo" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = CB1F6A5631AC997E7D6FAB73;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				24F2C0010000000000000001 /* XCLocalSwiftPackageReference "../../MMMDKit" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = AECCA5E910CCDB9BEB2B0C0F /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				B22D8FCDCF771A90BBFD3394 /* MMMDKitMacDemo */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		ABF9E6028D772F39B276A0CB /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1270727243F082D02DB29FCA /* DemoMarkdownSamples.swift in Sources */,
+				B4B3A3287EC9321282EE1351 /* MMMDKitMacDemoApp.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		16E0F317D24CD5989A60F4C6 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				COMBINE_HIDPI_IMAGES = YES;
+				INFOPLIST_FILE = Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 12.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.mmmdkit.demo.mac;
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		46D16821697455BE257D9418 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = "";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 12.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.7;
+			};
+			name = Release;
+		};
+		C1C6B1B9CBF51B7CA7B551D8 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				COMBINE_HIDPI_IMAGES = YES;
+				INFOPLIST_FILE = Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 12.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.mmmdkit.demo.mac;
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		D2A4C7909BEE11746B2C8EA9 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 12.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.7;
+			};
+			name = Debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		12B233C1B35782B41F504214 /* Build configuration list for PBXNativeTarget "MMMDKitMacDemo" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				16E0F317D24CD5989A60F4C6 /* Debug */,
+				C1C6B1B9CBF51B7CA7B551D8 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		77AFC25173AA86B7D4102017 /* Build configuration list for PBXProject "MMMDKitMacDemo" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D2A4C7909BEE11746B2C8EA9 /* Debug */,
+				46D16821697455BE257D9418 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+/* Begin XCLocalSwiftPackageReference section */
+		24F2C0010000000000000001 /* XCLocalSwiftPackageReference "../../MMMDKit" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ../../MMMDKit;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		24F2B0010000000000000001 /* MMMDCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 24F2C0010000000000000001 /* XCLocalSwiftPackageReference "../../MMMDKit" */;
+			productName = MMMDCore;
+		};
+		24F2B0010000000000000002 /* MMMDParserCmark */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 24F2C0010000000000000001 /* XCLocalSwiftPackageReference "../../MMMDKit" */;
+			productName = MMMDParserCmark;
+		};
+		24F2B0010000000000000003 /* MMMDStreaming */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 24F2C0010000000000000001 /* XCLocalSwiftPackageReference "../../MMMDKit" */;
+			productName = MMMDStreaming;
+		};
+		24F2B0010000000000000004 /* MMMDHighlighter */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 24F2C0010000000000000001 /* XCLocalSwiftPackageReference "../../MMMDKit" */;
+			productName = MMMDHighlighter;
+		};
+		24F2B0010000000000000005 /* MMMDAppKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 24F2C0010000000000000001 /* XCLocalSwiftPackageReference "../../MMMDKit" */;
+			productName = MMMDAppKit;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = B548FD4C031F961C9E21AA89 /* Project object */;
+}
