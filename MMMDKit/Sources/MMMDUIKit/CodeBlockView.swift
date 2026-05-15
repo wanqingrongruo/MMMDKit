@@ -25,6 +25,7 @@ public final class CodeBlockView: UIView {
     
     public init(codeBlock: CodeBlock, context: RenderContext) {
         super.init(frame: .zero)
+        mmmdSuppressTextViewAttachmentSelection()
         backgroundColor = UIColor { traitCollection in
             traitCollection.userInterfaceStyle == .dark ? UIColor(white: 0.1, alpha: 1.0) : UIColor(red: 0.98, green: 0.98, blue: 0.99, alpha: 1.0)
         }

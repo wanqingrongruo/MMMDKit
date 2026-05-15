@@ -35,6 +35,7 @@ public final class TableBlockView: UIView {
         let columnCount = max(rows.map(\.count).max() ?? 0, 1)
         preferredContentWidth = CGFloat(columnCount) * Self.minimumCellWidth
         super.init(frame: .zero)
+        mmmdSuppressTextViewAttachmentSelection()
         
         backgroundColor = UIColor { traitCollection in
             traitCollection.userInterfaceStyle == .dark ? UIColor(white: 0.1, alpha: 1.0) : .white

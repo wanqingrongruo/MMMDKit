@@ -9,6 +9,7 @@ public final class ImageBlockView: UIImageView {
     }
     public init(imageBlock: ImageBlock, context: RenderContext) {
         super.init(frame: .zero)
+        mmmdSuppressTextViewAttachmentSelection()
         contentMode = .scaleAspectFit
         isAccessibilityElement = true
         accessibilityLabel = imageBlock.alt

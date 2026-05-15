@@ -10,6 +10,7 @@ public final class ThematicBreakView: UIView {
 
     public init(context: RenderContext) {
         super.init(frame: .zero)
+        mmmdSuppressTextViewAttachmentSelection()
         isAccessibilityElement = true
         accessibilityLabel = "分割线"
 

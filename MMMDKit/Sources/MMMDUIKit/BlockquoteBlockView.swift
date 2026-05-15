@@ -29,6 +29,7 @@ public final class BlockquoteBlockView: UIView {
 
     public init(blocks: [MarkdownBlock], context: RenderContext) {
         super.init(frame: .zero)
+        mmmdSuppressTextViewAttachmentSelection()
         isAccessibilityElement = false
 
         let line = UIView()

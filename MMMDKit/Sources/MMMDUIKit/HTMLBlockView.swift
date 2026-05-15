@@ -11,6 +11,7 @@ public final class HTMLBlockView: UIView {
     }
     public init(htmlBlock: HTMLBlock, context: RenderContext) {
         super.init(frame: .zero)
+        mmmdSuppressTextViewAttachmentSelection()
         let webView = WKWebView(frame: .zero)
         webView.isOpaque = false
         webView.backgroundColor = .clear
