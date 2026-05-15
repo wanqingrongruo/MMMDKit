@@ -42,7 +42,7 @@ open class MarkdownCollectionViewHost: NSView, NSCollectionViewDataSource, NSCol
         
         for block in self.document.blocks {
             switch block {
-            case .heading, .paragraph, .blockquote, .list:
+            case .heading, .paragraph, .list:
                 currentTextGroup.append(block)
             default:
                 flushTextGroup()
@@ -156,6 +156,10 @@ open class MarkdownCollectionViewHost: NSView, NSCollectionViewDataSource, NSCol
             return HTMLBlockView(htmlBlock: htmlBlock, context: context)
         case .image(let imageBlock):
             return ImageBlockView(imageBlock: imageBlock, context: context)
+        case .blockquote(let blocks):
+            return BlockquoteBlockView(blocks: blocks, context: context)
+        case .thematicBreak:
+            return ThematicBreakView(context: context)
         default:
             return NSTextField(wrappingLabelWithString: MarkdownTextExtractor.plainText(from: block))
         }
@@ -186,6 +190,8 @@ open class MarkdownCollectionViewHost: NSView, NSCollectionViewDataSource, NSCol
             return 120
         case .image:
             return 180
+        case .thematicBreak:
+            return 1
         default:
             return max(28, textHeight(MarkdownTextExtractor.plainText(from: block), width: availableWidth, font: .preferredFont(forTextStyle: .body)) + 8)
         }

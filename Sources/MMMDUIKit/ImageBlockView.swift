@@ -3,8 +3,11 @@ import MMMDCore
 #if canImport(UIKit)
 import UIKit
 
-final class ImageBlockView: UIImageView {
-    init(imageBlock: ImageBlock, context: RenderContext) {
+public final class ImageBlockView: UIImageView {
+    public static func exactHeight(for imageBlock: ImageBlock, width: CGFloat, context: RenderContext) -> CGFloat {
+        return 200
+    }
+    public init(imageBlock: ImageBlock, context: RenderContext) {
         super.init(frame: .zero)
         contentMode = .scaleAspectFit
         isAccessibilityElement = true

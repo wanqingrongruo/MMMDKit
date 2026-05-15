@@ -42,7 +42,7 @@ open class MarkdownCollectionViewHost: UIView, UICollectionViewDataSource {
         
         for block in self.document.blocks {
             switch block {
-            case .heading, .paragraph, .blockquote, .list:
+            case .heading, .paragraph, .list:
                 currentTextGroup.append(block)
             default:
                 flushTextGroup()
@@ -142,6 +142,10 @@ open class MarkdownCollectionViewHost: UIView, UICollectionViewDataSource {
             return HTMLBlockView(htmlBlock: htmlBlock, context: context)
         case .image(let imageBlock):
             return ImageBlockView(imageBlock: imageBlock, context: context)
+        case .blockquote(let blocks):
+            return BlockquoteBlockView(blocks: blocks, context: context)
+        case .thematicBreak:
+            return ThematicBreakView(context: context)
         default:
             let label = UILabel()
             label.numberOfLines = 0

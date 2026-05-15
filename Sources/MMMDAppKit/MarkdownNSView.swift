@@ -111,7 +111,7 @@ open class MarkdownNSView: NSView {
 
         for block in document.blocks {
             switch block {
-            case .heading, .paragraph, .blockquote, .list:
+            case .heading, .paragraph, .list:
                 textBlocks.append(block)
                 continue
             default:
@@ -137,6 +137,10 @@ open class MarkdownNSView: NSView {
                 blockView = HTMLBlockView(htmlBlock: htmlBlock, context: context)
             case .image(let imageBlock):
                 blockView = ImageBlockView(imageBlock: imageBlock, context: context)
+            case .blockquote(let blocks):
+                blockView = BlockquoteBlockView(blocks: blocks, context: context)
+            case .thematicBreak:
+                blockView = ThematicBreakView(context: context)
             default:
                 currentBlockIndex += 1
                 continue

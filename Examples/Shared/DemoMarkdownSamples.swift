@@ -38,6 +38,8 @@ enum DemoMarkdownSamples {
     > 这是一段引用块。
     > 它会被渲染成带左侧指示线的原生视图。
 
+    ---
+
     ## 表格
 
     | 能力 | 状态 |
@@ -54,6 +56,8 @@ enum DemoMarkdownSamples {
     $$
     E = mc^2
     $$
+
+    ---
 
     ## Swift 代码
 
@@ -103,6 +107,8 @@ enum DemoMarkdownSamples {
         
         对于代码块，我们提供了基于关键字的高亮，支持扩展：
         
+        ---
+
         ```swift
         public struct MarkdownConfiguration {
             public var theme: MarkdownTheme = .default
@@ -117,6 +123,10 @@ enum DemoMarkdownSamples {
         $$
         f(x) = \\int_{-\\infty}^\\infty \\hat f(\\xi)\\,e^{2 \\pi i \\xi x} \\,d\\xi
         $$
+
+        ---
+
+        分割线也可以作为连续文本和非文本块之间的视觉分隔。
         """,
         """
         ### 04
@@ -132,6 +142,8 @@ enum DemoMarkdownSamples {
         | 内存占用 | 低 | 高 | 中 |
         | 流式更新 | ✅ 优秀 | ❌ 差 | ⚠️ 一般 |
         
+        ---
+
         不仅如此，长表格我们支持了**原生的水平滚动**，告别页面被撑爆的烦恼。
         """,
         """
@@ -176,6 +188,8 @@ enum DemoMarkdownSamples {
     > 💡 **家长小贴士：** 
     > 5岁孩子的专注力和执行力还在发育中，尽量把指令拆解成具体的动作。例如不说“快点睡觉”，而是说“现在我们去挑一本睡前故事书”。
 
+    ---
+
     ### 二、 积分奖励机制
 
     为了增加趣味性，我们可以引入“星星积分”。你可以将这段结构映射成家庭积分表：
@@ -186,6 +200,8 @@ enum DemoMarkdownSamples {
     | 按时刷牙 | ⭐️ x 1 | 早晚各一次 |
     | 收拾玩具 | ⭐️ x 2 | 保持区域整洁 |
     | 情绪稳定 | ⭐️ x 2 | 遇到困难不乱发脾气 |
+
+    ---
 
     你可以使用以下简单代码逻辑来计算孩子本周的奖励情况：
 
@@ -214,6 +230,8 @@ enum DemoMarkdownSamples {
     tracker.completeTask(stars: 2)
     ```
 
+    ---
+
     ### 三、 总结公式
 
     最后，我们可以用一个“数学公式”来总结习惯养成的秘诀：
@@ -222,6 +240,8 @@ enum DemoMarkdownSamples {
     \\text{好习惯} = \\text{清晰指令} + \\text{及时鼓励} + \\text{坚持重复}
     $$
     
+    ---
+
     希望这份方案能帮到您！如果有其他需要调整的环节，随时告诉我。
     """
 

@@ -5,8 +5,11 @@ import MMMDHTML
 import UIKit
 import WebKit
 
-final class HTMLBlockView: UIView {
-    init(htmlBlock: HTMLBlock, context: RenderContext) {
+public final class HTMLBlockView: UIView {
+    public static func exactHeight(for htmlBlock: HTMLBlock, width: CGFloat, context: RenderContext) -> CGFloat {
+        return 100
+    }
+    public init(htmlBlock: HTMLBlock, context: RenderContext) {
         super.init(frame: .zero)
         let webView = WKWebView(frame: .zero)
         webView.isOpaque = false

@@ -4,10 +4,23 @@ import MMMDMath
 #if canImport(UIKit)
 import UIKit
 
-final class MathBlockView: UIView {
+public final class MathBlockView: UIView {
     private let label = UILabel()
 
-    init(mathBlock: MathBlock, context: RenderContext) {
+    public static func exactHeight(for mathBlock: MathBlock, width: CGFloat, context: RenderContext) -> CGFloat {
+        let font = UIFont.preferredFont(forTextStyle: .body)
+        let paragraphStyle = NSMutableParagraphStyle()
+        paragraphStyle.lineBreakMode = .byWordWrapping
+        let rect = (mathBlock.latex as NSString).boundingRect(
+            with: CGSize(width: max(1, width - 24), height: .greatestFiniteMagnitude),
+            options: [.usesLineFragmentOrigin, .usesFontLeading],
+            attributes: [.font: font, .paragraphStyle: paragraphStyle],
+            context: nil
+        )
+        return ceil(rect.height) + 20
+    }
+
+    public init(mathBlock: MathBlock, context: RenderContext) {
         super.init(frame: .zero)
         backgroundColor = UIColor { traitCollection in
             traitCollection.userInterfaceStyle == .dark ? UIColor(white: 0.1, alpha: 1.0) : UIColor(red: 0.98, green: 0.98, blue: 0.99, alpha: 1.0)

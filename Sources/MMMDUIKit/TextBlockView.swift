@@ -3,12 +3,12 @@ import MMMDCore
 #if canImport(UIKit)
 import UIKit
 
-final class TextBlockView: UITextView, UITextViewDelegate {
+public final class TextBlockView: UITextView, UITextViewDelegate {
     private var onLinkTap: (@Sendable (URL) -> Void)?
 
     private static let attrStringCache = NSCache<NSString, NSAttributedString>()
 
-    init(blocks: [MarkdownBlock], context: RenderContext, cacheKey: String? = nil, textColor: UIColor? = nil) {
+    public init(blocks: [MarkdownBlock], context: RenderContext, cacheKey: String? = nil, textColor: UIColor? = nil) {
         super.init(frame: .zero, textContainer: nil)
         backgroundColor = .clear
         isEditable = false
@@ -42,12 +42,12 @@ final class TextBlockView: UITextView, UITextViewDelegate {
         fatalError("init(coder:) has not been implemented")
     }
 
-    func textView(_ textView: UITextView, shouldInteractWith URL: URL, in characterRange: NSRange, interaction: UITextItemInteraction) -> Bool {
+    public func textView(_ textView: UITextView, shouldInteractWith URL: URL, in characterRange: NSRange, interaction: UITextItemInteraction) -> Bool {
         onLinkTap?(URL)
         return false
     }
     
-    private static func attributedString(for blocks: [MarkdownBlock], context: RenderContext, textColor: UIColor, listLevel: Int, blockquoteLevel: Int) -> NSAttributedString {
+    public static func attributedString(for blocks: [MarkdownBlock], context: RenderContext, cacheKey: String? = nil, textColor: UIColor = .label, listLevel: Int = 0, blockquoteLevel: Int = 0) -> NSAttributedString {
         let result = NSMutableAttributedString()
         let blockSpacing = context.theme.spacing.blockSpacing
         

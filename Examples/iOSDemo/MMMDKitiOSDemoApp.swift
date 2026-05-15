@@ -37,8 +37,8 @@ final class DemoMarkdownViewController: UIViewController {
     private lazy var modeControl = UISegmentedControl(items: ["30+ 数据", "流式输出"])
     private let addConversationButton = UIButton(type: .system)
     private var configuration: MarkdownConfiguration!
-    private var messages: [DemoChatMessage] = []
-    private var streamingMessages: [DemoChatMessage] = []
+    private var messages: [MessageLayoutModel] = []
+    private var streamingMessages: [MessageLayoutModel] = []
     private var streamingProcessor: StreamingMarkdownProcessor?
     private var streamingTimer: Timer?
     private var streamingChunks: [String] = []
@@ -49,8 +49,6 @@ final class DemoMarkdownViewController: UIViewController {
     private var streamingConversationIndex = 0
     private var currentStreamingAssistantID: String?
     private var isApplyingStreamingReload = false
-
-    private var viewCache: [String: ChatMessageBubbleView] = [:]
 
     init() {
         let layout = UICollectionViewFlowLayout()
@@ -125,21 +123,23 @@ final class DemoMarkdownViewController: UIViewController {
 
     @objc private func modeChanged() {
         if modeControl.selectedSegmentIndex == 0 {
-            // Switch to static feed
-            streamingMessages = messages
-            showChatFeed()
+            addConversationButton.isHidden = true
+            messages = DemoMarkdownSamples.makeChatMessages().map {
+                let width = view.bounds.width
+                let context = RenderContext(theme: configuration.theme, actions: configuration.actions, toolbarOptions: configuration.toolbarOptions, blockRendererRegistry: configuration.blockRendererRegistry, inlineRendererRegistry: configuration.inlineRendererRegistry, codeHighlighter: configuration.codeHighlighter, mathRenderer: configuration.mathRenderer, imageLoader: configuration.imageLoader, codeBlockMaximumWidth: configuration.codeBlockMaximumWidth)
+                return MessageLayoutModel(message: $0, layout: AsyncLayoutEngine.build(message: $0, configuration: configuration, containerWidth: width, context: context))
+            }
+            transcriptCollectionView.reloadData()
+            scrollToBottom(animated: false)
         } else {
-            // Switch to streaming feed
             addConversationButton.isHidden = false
             messages = streamingMessages
-            transcriptCollectionView.collectionViewLayout.invalidateLayout()
             transcriptCollectionView.reloadData()
+            scrollToBottom(animated: false)
             
-            if messages.isEmpty || currentStreamingAssistantID == nil {
-                startStreaming(resetTranscript: true)
-            } else {
-                // If there's an ongoing stream or existing messages, just let them see it
-                scrollToBottom(animated: false)
+            if streamingMessages.isEmpty {
+                appendStreamingConversation(isInitial: true)
+                startStreaming(resetTranscript: false)
             }
         }
     }
@@ -186,29 +186,65 @@ final class DemoMarkdownViewController: UIViewController {
     }
 
     private func showChatFeed() {
-        addConversationButton.isHidden = true
-        messages = DemoMarkdownSamples.chatMessages
-        transcriptCollectionView.collectionViewLayout.invalidateLayout()
-        transcriptCollectionView.reloadData()
+        if messages.isEmpty {
+            let width = view.bounds.width
+            let context = RenderContext(theme: configuration.theme, actions: configuration.actions, toolbarOptions: configuration.toolbarOptions, blockRendererRegistry: configuration.blockRendererRegistry, inlineRendererRegistry: configuration.inlineRendererRegistry, codeHighlighter: configuration.codeHighlighter, mathRenderer: configuration.mathRenderer, imageLoader: configuration.imageLoader, codeBlockMaximumWidth: configuration.codeBlockMaximumWidth)
+            
+            DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+                guard let self else { return }
+                let samples = DemoMarkdownSamples.makeChatMessages()
+                let models = samples.map { MessageLayoutModel(message: $0, layout: AsyncLayoutEngine.build(message: $0, configuration: self.configuration, containerWidth: width, context: context)) }
+                DispatchQueue.main.async {
+                    self.messages = models
+                    self.transcriptCollectionView.reloadData()
+                    self.scrollToBottom(animated: false)
+                }
+            }
+        } else {
+            transcriptCollectionView.reloadData()
+            scrollToBottom(animated: false)
+        }
     }
 
     private func startStreaming(resetTranscript: Bool) {
         streamingTimer?.invalidate()
-        streamingUpdateWorkItem?.cancel()
-        streamingUpdateWorkItem = nil
-        pendingStreamingDocument = nil
-        isApplyingStreamingReload = false
-        addConversationButton.isHidden = false
-        
-        var isInitial = false
         if resetTranscript {
-            streamingConversationIndex = 0
-            currentStreamingAssistantID = nil
-            messages.removeAll()
             streamingMessages.removeAll()
-            isInitial = true
+            messages.removeAll()
+            transcriptCollectionView.reloadData()
         }
-        appendStreamingConversation(isInitial: isInitial)
+        
+        if streamingMessages.isEmpty {
+            appendStreamingConversation(isInitial: resetTranscript)
+        }
+        
+        streamingChunks = DemoMarkdownSamples.streamingChunks()
+        streamingIndex = 0
+        let processor = StreamingMarkdownProcessor(parser: CmarkMarkdownParser())
+        processor.onDiff = { [weak self] diff in
+            DispatchQueue.main.async {
+                guard let self else { return }
+                self.scheduleStreamingAssistantUpdate(with: diff.document)
+            }
+        }
+        streamingProcessor = processor
+        processor.reset()
+
+        streamingTimer = Timer.scheduledTimer(withTimeInterval: 0.08, repeats: true) { [weak self] timer in
+            guard let self else {
+                timer.invalidate()
+                return
+            }
+
+            guard self.streamingIndex < self.streamingChunks.count else {
+                self.streamingProcessor?.finish()
+                timer.invalidate()
+                return
+            }
+
+            self.streamingProcessor?.append(self.streamingChunks[self.streamingIndex])
+            self.streamingIndex += 1
+        }
     }
 
     private func appendStreamingConversation(isInitial: Bool) {
@@ -223,9 +259,13 @@ final class DemoMarkdownViewController: UIViewController {
         let assistant = DemoMarkdownSamples.makeStreamingAssistantPlaceholder(index: streamingConversationIndex)
         currentStreamingAssistantID = assistant.id
 
+        let width = view.bounds.width
+        let context = RenderContext(theme: configuration.theme, actions: configuration.actions, toolbarOptions: configuration.toolbarOptions, blockRendererRegistry: configuration.blockRendererRegistry, inlineRendererRegistry: configuration.inlineRendererRegistry, codeHighlighter: configuration.codeHighlighter, mathRenderer: configuration.mathRenderer, imageLoader: configuration.imageLoader, codeBlockMaximumWidth: configuration.codeBlockMaximumWidth)
+        let uModel = MessageLayoutModel(message: userMessage, layout: AsyncLayoutEngine.build(message: userMessage, configuration: configuration, containerWidth: width, context: context))
+        let aModel = MessageLayoutModel(message: assistant, layout: AsyncLayoutEngine.build(message: assistant, configuration: configuration, containerWidth: width, context: context))
         let insertionStart = streamingMessages.count
-        streamingMessages.append(userMessage)
-        streamingMessages.append(assistant)
+        streamingMessages.append(uModel)
+        streamingMessages.append(aModel)
 
         let shouldUpdateUI = modeControl.selectedSegmentIndex == 1
         if shouldUpdateUI {
@@ -313,7 +353,7 @@ final class DemoMarkdownViewController: UIViewController {
         let shouldUpdateUI = modeControl.selectedSegmentIndex == 1
         var targetArray = shouldUpdateUI ? messages : streamingMessages
         
-        guard let index = targetArray.lastIndex(where: { $0.id == currentStreamingAssistantID }) else {
+        guard let index = targetArray.lastIndex(where: { $0.message.id == currentStreamingAssistantID }) else {
             return
         }
         
@@ -325,7 +365,11 @@ final class DemoMarkdownViewController: UIViewController {
             document: document
         )
         
-        targetArray[index] = newMessage
+        let width = view.bounds.width
+        let context = RenderContext(theme: configuration.theme, actions: configuration.actions, toolbarOptions: configuration.toolbarOptions, blockRendererRegistry: configuration.blockRendererRegistry, inlineRendererRegistry: configuration.inlineRendererRegistry, codeHighlighter: configuration.codeHighlighter, mathRenderer: configuration.mathRenderer, imageLoader: configuration.imageLoader, codeBlockMaximumWidth: configuration.codeBlockMaximumWidth)
+        let newModel = MessageLayoutModel(message: newMessage, layout: AsyncLayoutEngine.build(message: newMessage, configuration: configuration, containerWidth: width, context: context))
+        
+        targetArray[index] = newModel
         
         if shouldUpdateUI {
             messages = targetArray
@@ -371,19 +415,28 @@ extension DemoMarkdownViewController: UICollectionViewDataSource, UICollectionVi
     }
 
     func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
-        let cell = collectionView.dequeueReusableCell(withReuseIdentifier: ChatMessageCell.reuseIdentifier, for: indexPath) as? ChatMessageCell ?? ChatMessageCell()
-        let message = messages[indexPath.item]
+        let cell = collectionView.dequeueReusableCell(withReuseIdentifier: ChatMessageCell.reuseIdentifier, for: indexPath) as! ChatMessageCell
+        let isStreaming = modeControl.selectedSegmentIndex == 1
+        let targetArray = isStreaming ? streamingMessages : messages
+        let model = targetArray[indexPath.item]
         
-        let bubble: ChatMessageBubbleView
-        if let cached = viewCache[message.id] {
-            bubble = cached
-        } else {
-            bubble = ChatMessageBubbleView()
-            viewCache[message.id] = bubble
-        }
+        // Removed viewCache, creating a new AsyncChatMessageBubbleView every time
+        let bubble = AsyncChatMessageBubbleView(layout: model.layout)
         
-        cell.host(bubble)
-        bubble.configure(message: message, configuration: configuration, containerWidth: collectionView.bounds.width)
+        let context = RenderContext(
+            theme: configuration.theme,
+            actions: configuration.actions,
+            toolbarOptions: configuration.toolbarOptions,
+            blockRendererRegistry: configuration.blockRendererRegistry,
+            inlineRendererRegistry: configuration.inlineRendererRegistry,
+            codeHighlighter: configuration.codeHighlighter,
+            mathRenderer: configuration.mathRenderer,
+            imageLoader: configuration.imageLoader,
+            codeBlockMaximumWidth: configuration.codeBlockMaximumWidth
+        )
+        
+        bubble.configure(model: model, configuration: configuration, context: context)
+        cell.host(bubble, width: model.layout.targetWidth, role: model.message.role)
         return cell
     }
 
@@ -392,15 +445,17 @@ extension DemoMarkdownViewController: UICollectionViewDataSource, UICollectionVi
         layout collectionViewLayout: UICollectionViewLayout,
         sizeForItemAt indexPath: IndexPath
     ) -> CGSize {
-        let width = max(1, collectionView.bounds.width)
-        let height = ChatMessageBubbleView.estimatedHeight(for: messages[indexPath.item], width: width, configuration: configuration)
-        return CGSize(width: width, height: height)
+        let isStreaming = modeControl.selectedSegmentIndex == 1
+        let targetArray = isStreaming ? streamingMessages : messages
+        guard indexPath.item < targetArray.count else { return .zero }
+        let model = targetArray[indexPath.item]
+        return CGSize(width: collectionView.bounds.width, height: model.layout.exactHeight)
     }
 }
 
 private final class ChatMessageCell: UICollectionViewCell {
     static let reuseIdentifier = "MMMDKit.ChatMessageCell"
-    private var hostedBubble: ChatMessageBubbleView?
+    private var hostedBubble: AsyncChatMessageBubbleView?
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -410,7 +465,7 @@ private final class ChatMessageCell: UICollectionViewCell {
         super.init(coder: coder)
     }
 
-    func host(_ bubble: ChatMessageBubbleView) {
+    func host(_ bubble: AsyncChatMessageBubbleView, width: CGFloat, role: DemoChatMessage.Role) {
         if hostedBubble == bubble { return }
         hostedBubble?.removeFromSuperview()
         hostedBubble = bubble
@@ -418,167 +473,271 @@ private final class ChatMessageCell: UICollectionViewCell {
         contentView.addSubview(bubble)
         let bottomConstraint = bubble.bottomAnchor.constraint(equalTo: contentView.bottomAnchor)
         bottomConstraint.priority = .init(999)
+        let widthConstraint = bubble.widthAnchor.constraint(equalToConstant: width)
+        widthConstraint.priority = .init(999)
+        let horizontalConstraint: NSLayoutConstraint
+        switch role {
+        case .assistant:
+            horizontalConstraint = bubble.leadingAnchor.constraint(equalTo: contentView.leadingAnchor)
+        case .user:
+            horizontalConstraint = bubble.trailingAnchor.constraint(equalTo: contentView.trailingAnchor)
+        }
         NSLayoutConstraint.activate([
-            bubble.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
-            bubble.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
+            widthConstraint,
+            horizontalConstraint,
             bubble.topAnchor.constraint(equalTo: contentView.topAnchor),
             bottomConstraint
         ])
     }
 }
 
-private final class ChatMessageBubbleView: UIView {
-    private static var widthCache = NSCache<NSString, NSNumber>()
+private struct AsyncBubbleLayout {
+    let id = UUID()
+    let attributedText: NSAttributedString
+    let placeholders: [Placeholder]
+    let targetWidth: CGFloat
+    let exactHeight: CGFloat
+    let textContainer: NSTextContainer
+    let layoutManager: NSLayoutManager
+    let textStorage: NSTextStorage
+    
+    struct Placeholder {
+        let range: NSRange
+        let block: MarkdownBlock
+        let exactFrame: CGRect
+    }
+}
 
+private struct MessageLayoutModel {
+    let message: DemoChatMessage
+    let layout: AsyncBubbleLayout
+}
+
+private final class AsyncLayoutEngine {
+    static func build(message: DemoChatMessage, configuration: MarkdownConfiguration, containerWidth: CGFloat, context: RenderContext) -> AsyncBubbleLayout {
+        let maxAllowedWidth = containerWidth * 0.9
+        let resultString = NSMutableAttributedString()
+        var placeholders: [AsyncBubbleLayout.Placeholder] = []
+        var currentTextBlocks: [MarkdownBlock] = []
+        
+        func flushTextBlocks() {
+            guard !currentTextBlocks.isEmpty else { return }
+            let attr = TextBlockView.attributedString(for: currentTextBlocks, context: context, cacheKey: nil, textColor: .label, listLevel: 0, blockquoteLevel: 0)
+            resultString.append(attr)
+            currentTextBlocks.removeAll()
+        }
+        
+        for (blockIndex, block) in message.document.blocks.enumerated() {
+            switch block {
+            case .heading, .paragraph, .list:
+                currentTextBlocks.append(block)
+                continue
+            default:
+                flushTextBlocks()
+            }
+            
+            let hasPreviousContent = resultString.length > 0
+            if hasPreviousContent && resultString.string.last != "\n" {
+                resultString.append(NSAttributedString(string: "\n"))
+            }
+            
+            var blockWidth: CGFloat = maxAllowedWidth - 28
+            var blockHeight: CGFloat = 0
+            
+            switch block {
+            case .code(let codeBlock):
+                blockHeight = CodeBlockView.exactHeight(for: codeBlock, width: blockWidth, context: context)
+            case .table(let table):
+                let minCellWidth: CGFloat = 132
+                let columnCount = max((table.rows.map(\.count).max() ?? 0), table.header.count, 1)
+                let contentWidth = CGFloat(columnCount) * minCellWidth
+                blockWidth = min(contentWidth, maxAllowedWidth - 28)
+                blockHeight = TableBlockView.exactHeight(for: table, width: blockWidth, context: context)
+            case .math(let mathBlock):
+                blockHeight = MathBlockView.exactHeight(for: mathBlock, width: blockWidth, context: context)
+            case .html(let htmlBlock):
+                blockHeight = HTMLBlockView.exactHeight(for: htmlBlock, width: blockWidth, context: context)
+            case .image(let imageBlock):
+                blockHeight = ImageBlockView.exactHeight(for: imageBlock, width: blockWidth, context: context)
+            case .blockquote(let blocks):
+                blockHeight = BlockquoteBlockView.exactHeight(for: blocks, width: blockWidth, context: context)
+            case .thematicBreak:
+                blockHeight = ThematicBreakView.exactHeight(context: context)
+            default:
+                break
+            }
+            
+            let attachment = NSTextAttachment()
+            attachment.bounds = CGRect(x: 0, y: 0, width: blockWidth, height: blockHeight)
+            let renderer = UIGraphicsImageRenderer(size: CGSize(width: 1, height: 1))
+            attachment.image = renderer.image { _ in }
+            
+            let hasFollowingContent = blockIndex + 1 < message.document.blocks.count
+            let attachString = NSMutableAttributedString(string: hasFollowingContent ? "\u{FFFC}\n" : "\u{FFFC}")
+            attachString.addAttribute(.attachment, value: attachment, range: NSRange(location: 0, length: 1))
+
+            let paragraphStyle = NSMutableParagraphStyle()
+            paragraphStyle.paragraphSpacingBefore = hasPreviousContent ? context.theme.spacing.blockSpacing : 0
+            paragraphStyle.paragraphSpacing = Self.needsTrailingSpacing(after: blockIndex, in: message.document.blocks) ? context.theme.spacing.blockSpacing : 0
+            attachString.addAttribute(.paragraphStyle, value: paragraphStyle, range: NSRange(location: 0, length: attachString.length))
+            
+            let range = NSRange(location: resultString.length, length: 1)
+            resultString.append(attachString)
+            
+            placeholders.append(.init(range: range, block: block, exactFrame: .zero))
+        }
+        flushTextBlocks()
+        
+        let textStorage = NSTextStorage(attributedString: resultString)
+        let layoutManager = NSLayoutManager()
+        let textContainer = NSTextContainer(size: CGSize(width: maxAllowedWidth - 28, height: .greatestFiniteMagnitude))
+        textContainer.lineFragmentPadding = 0
+        layoutManager.addTextContainer(textContainer)
+        textStorage.addLayoutManager(layoutManager)
+        layoutManager.ensureLayout(for: textContainer)
+        
+        let usedRect = layoutManager.usedRect(for: textContainer)
+        let finalWidth = min(ceil(usedRect.width) + 28, maxAllowedWidth)
+        
+        let titleFont = UIFont.preferredFont(forTextStyle: .caption1)
+        let titleHeight = ceil(titleFont.lineHeight)
+        let textY = 10 + titleHeight + 8
+        
+        let finalHeight = textY + ceil(usedRect.height) + 12
+        
+        var updatedPlaceholders: [AsyncBubbleLayout.Placeholder] = []
+        for p in placeholders {
+            let glyphRange = layoutManager.glyphRange(forCharacterRange: p.range, actualCharacterRange: nil)
+            var rect = layoutManager.boundingRect(forGlyphRange: glyphRange, in: textContainer)
+            rect.origin.x += 14 // left padding in textView
+            
+            updatedPlaceholders.append(.init(range: p.range, block: p.block, exactFrame: rect))
+        }
+        
+        return AsyncBubbleLayout(attributedText: resultString, placeholders: updatedPlaceholders, targetWidth: finalWidth, exactHeight: finalHeight, textContainer: textContainer, layoutManager: layoutManager, textStorage: textStorage)
+    }
+
+    private static func needsTrailingSpacing(after index: Int, in blocks: [MarkdownBlock]) -> Bool {
+        guard index + 1 < blocks.count else { return false }
+        switch blocks[index + 1] {
+        case .heading, .paragraph, .list:
+            return true
+        default:
+            return false
+        }
+    }
+}
+
+private final class AsyncChatMessageBubbleView: UIView, UITextViewDelegate {
     private let bubbleView = UIView()
     private let titleLabel = UILabel()
-    private let markdownView = MarkdownView()
-    private var alignmentConstraints: [NSLayoutConstraint] = []
-    private var currentRole: DemoChatMessage.Role?
-    private var currentMessageID: String?
-    private var currentDocumentSourceCount: Int = -1
-    private var maxBubbleWidth: CGFloat = 0
-    private var minWidthConstraint: NSLayoutConstraint?
-    private var maxWidthConstraint: NSLayoutConstraint?
-
-    override init(frame: CGRect) {
-        super.init(frame: frame)
+    private let textView: UITextView
+    private var subviewOverlays: [(range: NSRange, view: UIView)] = []
+    var layoutID: UUID?
+    
+    init(layout: AsyncBubbleLayout) {
+        self.textView = UITextView(frame: .zero, textContainer: layout.textContainer)
+        super.init(frame: .zero)
         setupView()
     }
-
+    
     required init?(coder: NSCoder) {
-        super.init(coder: coder)
-        setupView()
+        fatalError("init(coder:) has not been implemented")
     }
-
-    func configure(message: DemoChatMessage, configuration: MarkdownConfiguration, containerWidth: CGFloat) {
-        let isSameMessage = message.id == currentMessageID
-        let isSameDocument = message.document.source.count == currentDocumentSourceCount
-
-        if !isSameMessage || !isSameDocument {
-            titleLabel.text = message.title
-            bubbleView.backgroundColor = backgroundColor(for: message.role)
-            markdownView.configuration = configuration
-            markdownView.render(message.document)
-            markdownView.invalidateIntrinsicContentSize()
-            
-            currentMessageID = message.id
-            currentDocumentSourceCount = message.document.source.count
-            maxBubbleWidth = 0
-            minWidthConstraint?.isActive = false
-        }
-        
-        let allowedMaxWidth = containerWidth * 0.9
-        let cacheKey = "\(message.id)_\(allowedMaxWidth)_\(message.document.source.count)" as NSString
-        let targetWidth: CGFloat
-        if let cached = Self.widthCache.object(forKey: cacheKey) {
-            targetWidth = CGFloat(cached.floatValue)
-        } else {
-            maxWidthConstraint?.isActive = false
-            let unconstrainedSize = bubbleView.systemLayoutSizeFitting(UIView.layoutFittingCompressedSize)
-            maxWidthConstraint?.isActive = true
-            targetWidth = min(unconstrainedSize.width, allowedMaxWidth)
-            Self.widthCache.setObject(NSNumber(value: Float(targetWidth)), forKey: cacheKey)
-        }
-        
-        if targetWidth > maxBubbleWidth {
-            maxBubbleWidth = targetWidth
-            minWidthConstraint?.isActive = false
-            let constraint = bubbleView.widthAnchor.constraint(greaterThanOrEqualToConstant: maxBubbleWidth)
-            constraint.priority = UILayoutPriority(999)
-            constraint.isActive = true
-            minWidthConstraint = constraint
-        }
-
-        guard currentRole != message.role else {
-            setNeedsLayout()
-            return
-        }
-        currentRole = message.role
-        NSLayoutConstraint.deactivate(alignmentConstraints)
-        switch message.role {
-        case .assistant:
-            alignmentConstraints = [
-                bubbleView.leadingAnchor.constraint(equalTo: leadingAnchor),
-                bubbleView.trailingAnchor.constraint(lessThanOrEqualTo: trailingAnchor)
-            ]
-        case .user:
-            alignmentConstraints = [
-                bubbleView.trailingAnchor.constraint(equalTo: trailingAnchor),
-                bubbleView.leadingAnchor.constraint(greaterThanOrEqualTo: leadingAnchor)
-            ]
-        }
-        NSLayoutConstraint.activate(alignmentConstraints)
-        setNeedsLayout()
-    }
-
+    
     private func setupView() {
+        layer.drawsAsynchronously = true
+        
         bubbleView.layer.cornerRadius = 14
-        bubbleView.translatesAutoresizingMaskIntoConstraints = false
+        bubbleView.layer.drawsAsynchronously = true
         addSubview(bubbleView)
-
+        
         titleLabel.font = .preferredFont(forTextStyle: .caption1)
         titleLabel.textColor = .secondaryLabel
-        titleLabel.translatesAutoresizingMaskIntoConstraints = false
         bubbleView.addSubview(titleLabel)
-
-        markdownView.translatesAutoresizingMaskIntoConstraints = false
-        bubbleView.addSubview(markdownView)
-
-        let bubbleBottomConstraint = bubbleView.bottomAnchor.constraint(equalTo: bottomAnchor)
-        bubbleBottomConstraint.priority = .init(999)
         
-        let maxWidthConst = bubbleView.widthAnchor.constraint(lessThanOrEqualTo: widthAnchor, multiplier: 0.9)
-        maxWidthConstraint = maxWidthConst
-
-        NSLayoutConstraint.activate([
-            bubbleView.topAnchor.constraint(equalTo: topAnchor),
-            bubbleBottomConstraint,
-            maxWidthConst,
-
-            titleLabel.leadingAnchor.constraint(equalTo: bubbleView.leadingAnchor, constant: 14),
-            titleLabel.trailingAnchor.constraint(lessThanOrEqualTo: bubbleView.trailingAnchor, constant: -14),
-            titleLabel.topAnchor.constraint(equalTo: bubbleView.topAnchor, constant: 10),
-
-            markdownView.leadingAnchor.constraint(equalTo: bubbleView.leadingAnchor, constant: 14),
-            markdownView.trailingAnchor.constraint(equalTo: bubbleView.trailingAnchor, constant: -14),
-            markdownView.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 8),
-            markdownView.bottomAnchor.constraint(equalTo: bubbleView.bottomAnchor, constant: -12)
-        ])
+        textView.isEditable = false
+        textView.isScrollEnabled = false
+        textView.backgroundColor = .clear
+        textView.textContainerInset = UIEdgeInsets(top: 0, left: 14, bottom: 0, right: 14)
+        textView.textContainer.lineFragmentPadding = 0
+        textView.delegate = self
+        textView.layer.drawsAsynchronously = true
+        bubbleView.addSubview(textView)
     }
-
+    
+    func textView(_ textView: UITextView, shouldInteractWith textAttachment: NSTextAttachment, in characterRange: NSRange, interaction: UITextItemInteraction) -> Bool {
+        return false // 禁用附件的长按菜单和放大镜，避免重复的悬浮视图
+    }
+    
+    func configure(model: MessageLayoutModel, configuration: MarkdownConfiguration, context: RenderContext) {
+        if layoutID == model.layout.id { return }
+        let isFirstTime = (layoutID == nil)
+        layoutID = model.layout.id
+        
+        titleLabel.text = model.message.title
+        bubbleView.backgroundColor = backgroundColor(for: model.message.role)
+        
+        if !isFirstTime {
+            // Re-configuring an existing view (e.g., streaming). We must update the text view.
+            // Since we cannot replace the textContainer, we update the attributedText which triggers layout on the existing TextKit stack.
+            textView.attributedText = model.layout.attributedText
+        }
+        
+        subviewOverlays.forEach { $0.view.removeFromSuperview() }
+        subviewOverlays.removeAll()
+        
+        for p in model.layout.placeholders {
+            let blockView: UIView
+            switch p.block {
+            case .code(let codeBlock):
+                blockView = CodeBlockView(codeBlock: codeBlock, context: context)
+            case .table(let table):
+                blockView = TableBlockView(table: table, context: context)
+            case .math(let mathBlock):
+                blockView = MathBlockView(mathBlock: mathBlock, context: context)
+            case .html(let htmlBlock):
+                blockView = HTMLBlockView(htmlBlock: htmlBlock, context: context)
+            case .image(let imageBlock):
+                blockView = ImageBlockView(imageBlock: imageBlock, context: context)
+            case .blockquote(let blocks):
+                blockView = BlockquoteBlockView(blocks: blocks, context: context)
+            case .thematicBreak:
+                blockView = ThematicBreakView(context: context)
+            default:
+                continue
+            }
+            blockView.frame = p.exactFrame
+            subviewOverlays.append((p.range, blockView))
+            textView.addSubview(blockView)
+        }
+        setNeedsLayout()
+    }
+    
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        let width = bounds.width
+        bubbleView.frame = bounds
+        
+        let titleFont = UIFont.preferredFont(forTextStyle: .caption1)
+        let titleHeight = ceil(titleFont.lineHeight)
+        titleLabel.frame = CGRect(x: 14, y: 10, width: width - 28, height: titleHeight)
+        
+        let textY = 10 + titleHeight + 8
+        textView.frame = CGRect(x: 0, y: textY, width: width, height: bounds.height - textY)
+    }
+    
     private func backgroundColor(for role: DemoChatMessage.Role) -> UIColor {
         switch role {
         case .assistant:
             return UIColor { traitCollection in
-                traitCollection.userInterfaceStyle == .dark ? UIColor(white: 0.16, alpha: 1.0) : UIColor(red: 0.95, green: 0.95, blue: 0.96, alpha: 1.0)
+                traitCollection.userInterfaceStyle == .dark ? UIColor(white: 0.2, alpha: 1.0) : UIColor(red: 0.95, green: 0.96, blue: 0.97, alpha: 1.0)
             }
         case .user:
             return UIColor { traitCollection in
-                traitCollection.userInterfaceStyle == .dark ? UIColor(red: 0.11, green: 0.33, blue: 0.90, alpha: 0.3) : UIColor(red: 0.91, green: 0.95, blue: 1.0, alpha: 1.0)
+                traitCollection.userInterfaceStyle == .dark ? UIColor(red: 0, green: 0.5, blue: 1.0, alpha: 1.0) : UIColor(red: 0.0, green: 0.48, blue: 1.0, alpha: 1.0)
             }
         }
     }
-
-    private static var bubbleHeightCache = NSCache<NSString, NSNumber>()
-    private static let sizingBubble = ChatMessageBubbleView()
-
-    static func estimatedHeight(for message: DemoChatMessage, width: CGFloat, configuration: MarkdownConfiguration) -> CGFloat {
-        let cacheKey = "\(message.id)_\(width)_\(message.document.source.count)" as NSString
-        if let cached = bubbleHeightCache.object(forKey: cacheKey) {
-            return CGFloat(cached.floatValue)
-        }
-        
-        sizingBubble.configure(message: message, configuration: configuration, containerWidth: width)
-        let targetSize = CGSize(width: width, height: UIView.layoutFittingCompressedSize.height)
-        let size = sizingBubble.systemLayoutSizeFitting(
-            targetSize,
-            withHorizontalFittingPriority: .required,
-            verticalFittingPriority: .fittingSizeLevel
-        )
-        
-        let totalHeight = ceil(size.height)
-        bubbleHeightCache.setObject(NSNumber(value: Float(totalHeight)), forKey: cacheKey)
-        return totalHeight
-    }
 }
+    

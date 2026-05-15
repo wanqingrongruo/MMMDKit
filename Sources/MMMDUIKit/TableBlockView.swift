@@ -3,13 +3,37 @@ import MMMDCore
 #if canImport(UIKit)
 import UIKit
 
-final class TableBlockView: UIView {
+public final class TableBlockView: UIView {
     private static let toolbarHeight: CGFloat = 36
     private static let minimumCellWidth: CGFloat = 132
     private static let minimumRowHeight: CGFloat = 42
     let preferredContentWidth: CGFloat
 
-    init(table: TableBlock, context: RenderContext) {
+    public static func exactHeight(for table: TableBlock, width: CGFloat, context: RenderContext) -> CGFloat {
+        let rows = normalizedRows(for: table)
+        let columnCount = max(rows.map(\.count).max() ?? 0, 1)
+        let contentWidth = CGFloat(columnCount) * minimumCellWidth
+        // TableBlockView wraps the table in a scroll view, so text does not wrap based on the screen width!
+        // It wraps based on `minimumCellWidth`.
+        var totalHeight: CGFloat = toolbarHeight
+        
+        let calcRow: ([InlineContent], Bool) -> CGFloat = { cells, isHeader in
+            var maxH: CGFloat = minimumRowHeight
+            let font = isHeader ? UIFont.boldSystemFont(ofSize: 14) : UIFont.systemFont(ofSize: 14)
+            for cell in cells {
+                let text = MarkdownTextExtractor.plainText(from: cell)
+                let rect = (text as NSString).boundingRect(with: CGSize(width: minimumCellWidth - 16, height: .greatestFiniteMagnitude), options: .usesLineFragmentOrigin, attributes: [.font: font], context: nil)
+                maxH = max(maxH, ceil(rect.height) + 16)
+            }
+            return maxH
+        }
+        
+        if !table.header.isEmpty { totalHeight += calcRow(table.header, true) }
+        for row in table.rows { totalHeight += calcRow(row, false) }
+        return totalHeight
+    }
+    
+    public init(table: TableBlock, context: RenderContext) {
         let rows = Self.normalizedRows(for: table)
         let columnCount = max(rows.map(\.count).max() ?? 0, 1)
         preferredContentWidth = CGFloat(columnCount) * Self.minimumCellWidth

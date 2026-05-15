@@ -4,8 +4,26 @@ import MMMDHighlighter
 #if canImport(UIKit)
 import UIKit
 
-final class CodeBlockView: UIView {
-    init(codeBlock: CodeBlock, context: RenderContext) {
+public final class CodeBlockView: UIView {
+    public static func exactHeight(for codeBlock: CodeBlock, width: CGFloat, context: RenderContext) -> CGFloat {
+        let baseFont = UIFont.monospacedSystemFont(ofSize: 14, weight: .regular)
+        let codeAttr = NSAttributedString(string: codeBlock.content, attributes: [.font: baseFont])
+        let textStorage = NSTextStorage(attributedString: codeAttr)
+        let layoutManager = NSLayoutManager()
+        let textContainerWidth = width - context.theme.spacing.codePadding * 2
+        let textContainer = NSTextContainer(size: CGSize(width: max(0, textContainerWidth), height: .greatestFiniteMagnitude))
+        textContainer.lineFragmentPadding = 0
+        layoutManager.addTextContainer(textContainer)
+        textStorage.addLayoutManager(layoutManager)
+        let usedRect = layoutManager.usedRect(for: textContainer)
+        
+        let hasHeader = true // Currently we always show a header, even if language is empty (it says "code")
+        let headerHeight: CGFloat = hasHeader ? 36 : 0
+        
+        return ceil(usedRect.height) + headerHeight + CGFloat(8) /* stack spacing */ + context.theme.spacing.codePadding
+    }
+    
+    public init(codeBlock: CodeBlock, context: RenderContext) {
         super.init(frame: .zero)
         backgroundColor = UIColor { traitCollection in
             traitCollection.userInterfaceStyle == .dark ? UIColor(white: 0.1, alpha: 1.0) : UIColor(red: 0.98, green: 0.98, blue: 0.99, alpha: 1.0)
