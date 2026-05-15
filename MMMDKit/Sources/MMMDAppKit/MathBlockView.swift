@@ -67,6 +67,11 @@ final class MathBlockView: NSView {
     }
 
     private func applyMath(_ mathBlock: MathBlock, context: RenderContext) {
+        if Self.shouldUsePlainTextFallback(for: mathBlock.latex) {
+            showFallbackText(Self.fallbackText(for: mathBlock.latex))
+            return
+        }
+
         guard let renderer = context.mathRenderer else {
             #if canImport(SwiftMath)
             configureNativeMath(mathBlock)
@@ -122,6 +127,40 @@ final class MathBlockView: NSView {
         #endif
         fallbackLabel.isHidden = false
         fallbackLabel.stringValue = text
+    }
+
+    private static func shouldUsePlainTextFallback(for latex: String) -> Bool {
+        latex.contains("\\text{") || latex.contains("\\mathrm{")
+    }
+
+    private static func fallbackText(for latex: String) -> String {
+        var result = latex
+        for command in ["text", "mathrm"] {
+            result = replacingSingleArgumentCommand(command, in: result)
+        }
+        result = replacingTwoArgumentCommand("frac", in: result, template: "($1) / ($2)")
+        result = replacingSingleArgumentCommand("sqrt", in: result, template: "√($1)")
+        return result
+    }
+
+    private static func replacingSingleArgumentCommand(_ command: String, in text: String, template: String = "$1") -> String {
+        let pattern = #"\\#(command)\{([^{}]*)\}"#
+        guard let expression = try? NSRegularExpression(pattern: pattern) else {
+            return text
+        }
+
+        let range = NSRange(text.startIndex..<text.endIndex, in: text)
+        return expression.stringByReplacingMatches(in: text, range: range, withTemplate: template)
+    }
+
+    private static func replacingTwoArgumentCommand(_ command: String, in text: String, template: String) -> String {
+        let pattern = #"\\#(command)\{([^{}]*)\}\{([^{}]*)\}"#
+        guard let expression = try? NSRegularExpression(pattern: pattern) else {
+            return text
+        }
+
+        let range = NSRange(text.startIndex..<text.endIndex, in: text)
+        return expression.stringByReplacingMatches(in: text, range: range, withTemplate: template)
     }
 }
 #endif

@@ -51,7 +51,7 @@ enum DemoMarkdownSamples {
 
     ## 数学公式
 
-    inline math 示例：$x^2 + y^2 = z^2$
+    inline math 示例：$x^2 + y^2 = z^2$，也可以展示 $\\nabla \\cdot \\mathbf{E} = \\rho / \\varepsilon_0$。
 
     $$
     E = mc^2
@@ -63,6 +63,22 @@ enum DemoMarkdownSamples {
 
     $$
     \\int_{0}^{\\infty} e^{-x^2} dx = \\frac{\\sqrt{\\pi}}{2}
+    $$
+
+    $$
+    \\sum_{k=1}^{n} k = \\frac{n(n+1)}{2}
+    $$
+
+    $$
+    \\lim_{n \\to \\infty} \\left(1 + \\frac{x}{n}\\right)^n = e^x
+    $$
+
+    $$
+    A^{-1} = \\frac{1}{ad-bc}\\begin{pmatrix} d & -b \\\\ -c & a \\end{pmatrix}
+    $$
+
+    $$
+    \\frac{\\partial u}{\\partial t} = \\alpha \\nabla^2 u
     $$
 
     ---
@@ -126,7 +142,7 @@ enum DemoMarkdownSamples {
         }
         ```
         
-        对于公式，我们支持 inline math $E=mc^2$ 甚至多行的 display math：
+        对于公式，我们支持 inline math $E=mc^2$，也支持更正式的 display math：
         
         $$
         f(x) = \\int_{-\\infty}^\\infty \\hat f(\\xi)\\,e^{2 \\pi i \\xi x} \\,d\\xi
@@ -138,6 +154,14 @@ enum DemoMarkdownSamples {
 
         $$
         y = \\begin{cases} x^2, & x \\ge 0 \\\\ -x, & x < 0 \\end{cases}
+        $$
+
+        $$
+        \\left(\\sum_{i=1}^{n} a_i b_i\\right)^2 \\le \\left(\\sum_{i=1}^{n} a_i^2\\right)\\left(\\sum_{i=1}^{n} b_i^2\\right)
+        $$
+
+        $$
+        p(x) = \\frac{1}{\\sqrt{2\\pi\\sigma^2}}e^{-\\frac{(x-\\mu)^2}{2\\sigma^2}}
         $$
 
         ---
@@ -250,14 +274,18 @@ enum DemoMarkdownSamples {
 
     ### 三、 总结公式
 
-    最后，我们可以用一个“数学公式”来总结习惯养成的秘诀：
+    最后，我们用几条更正式的数学公式来测试复杂公式排版：
     
     $$
-    \\text{好习惯} = \\text{清晰指令} + \\text{及时鼓励} + \\text{坚持重复}
+    J(\\theta) = \\frac{1}{2m}\\sum_{i=1}^{m}\\left(h_\\theta(x^{(i)}) - y^{(i)}\\right)^2
     $$
 
     $$
-    \\frac{\\text{每日坚持}}{\\text{任务难度}} + \\sqrt{\\text{及时反馈}} = \\text{稳定成长}
+    \\theta_{t+1} = \\theta_t - \\eta \\nabla J(\\theta_t)
+    $$
+
+    $$
+    P(A\\mid B) = \\frac{P(B\\mid A)P(A)}{P(B)}
     $$
     
     ---

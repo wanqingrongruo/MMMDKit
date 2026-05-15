@@ -16,6 +16,10 @@ public final class MathBlockView: UIView {
     private let fallbackLabel = UILabel()
 
     public static func exactHeight(for mathBlock: MathBlock, width: CGFloat, context: RenderContext) -> CGFloat {
+        if shouldUsePlainTextFallback(for: mathBlock.latex) {
+            return fallbackHeight(for: fallbackText(for: mathBlock.latex), width: width)
+        }
+
         #if canImport(SwiftMath)
         if context.mathRenderer == nil {
             let label = configuredMathLabel(for: mathBlock, context: context)
@@ -26,10 +30,14 @@ public final class MathBlockView: UIView {
         }
         #endif
 
+        return fallbackHeight(for: mathBlock.latex, width: width)
+    }
+
+    private static func fallbackHeight(for text: String, width: CGFloat) -> CGFloat {
         let font = UIFont.preferredFont(forTextStyle: .body)
         let paragraphStyle = NSMutableParagraphStyle()
         paragraphStyle.lineBreakMode = .byWordWrapping
-        let rect = (mathBlock.latex as NSString).boundingRect(
+        let rect = (text as NSString).boundingRect(
             with: CGSize(width: max(1, width - 24), height: .greatestFiniteMagnitude),
             options: [.usesLineFragmentOrigin, .usesFontLeading],
             attributes: [.font: font, .paragraphStyle: paragraphStyle],
@@ -103,6 +111,11 @@ public final class MathBlockView: UIView {
     }
 
     private func applyMath(_ mathBlock: MathBlock, context: RenderContext) {
+        if Self.shouldUsePlainTextFallback(for: mathBlock.latex) {
+            showFallbackText(Self.fallbackText(for: mathBlock.latex))
+            return
+        }
+
         guard let renderer = context.mathRenderer else {
             #if canImport(SwiftMath)
             configureNativeMath(mathBlock, context: context)
@@ -159,6 +172,40 @@ public final class MathBlockView: UIView {
         #endif
         fallbackLabel.isHidden = false
         fallbackLabel.text = text
+    }
+
+    private static func shouldUsePlainTextFallback(for latex: String) -> Bool {
+        latex.contains("\\text{") || latex.contains("\\mathrm{")
+    }
+
+    private static func fallbackText(for latex: String) -> String {
+        var result = latex
+        for command in ["text", "mathrm"] {
+            result = replacingSingleArgumentCommand(command, in: result)
+        }
+        result = replacingTwoArgumentCommand("frac", in: result, template: "($1) / ($2)")
+        result = replacingSingleArgumentCommand("sqrt", in: result, template: "√($1)")
+        return result
+    }
+
+    private static func replacingSingleArgumentCommand(_ command: String, in text: String, template: String = "$1") -> String {
+        let pattern = #"\\#(command)\{([^{}]*)\}"#
+        guard let expression = try? NSRegularExpression(pattern: pattern) else {
+            return text
+        }
+
+        let range = NSRange(text.startIndex..<text.endIndex, in: text)
+        return expression.stringByReplacingMatches(in: text, range: range, withTemplate: template)
+    }
+
+    private static func replacingTwoArgumentCommand(_ command: String, in text: String, template: String) -> String {
+        let pattern = #"\\#(command)\{([^{}]*)\}\{([^{}]*)\}"#
+        guard let expression = try? NSRegularExpression(pattern: pattern) else {
+            return text
+        }
+
+        let range = NSRange(text.startIndex..<text.endIndex, in: text)
+        return expression.stringByReplacingMatches(in: text, range: range, withTemplate: template)
     }
 
     #if canImport(SwiftMath)
