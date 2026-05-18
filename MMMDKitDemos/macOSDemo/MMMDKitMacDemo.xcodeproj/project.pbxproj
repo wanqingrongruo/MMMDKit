@@ -7,6 +7,11 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		B10000000000000000000001 /* MacChatFeedViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000000000000000000001 /* MacChatFeedViewController.swift */; };
+		B10000000000000000000002 /* StaticMacChatFeedViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000000000000000000002 /* StaticMacChatFeedViewController.swift */; };
+		B10000000000000000000003 /* StreamingMacChatFeedViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000000000000000000003 /* StreamingMacChatFeedViewController.swift */; };
+		B10000000000000000000004 /* DemoImageLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000000000000000000004 /* DemoImageLoader.swift */; };
+		B10000000000000000000005 /* ChatMessageComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000000000000000000005 /* ChatMessageComponents.swift */; };
 		1270727243F082D02DB29FCA /* DemoMarkdownSamples.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03BDCB50972711FD5C1C903 /* DemoMarkdownSamples.swift */; };
 		24F2A0010000000000000001 /* MMMDCore in Frameworks */ = {isa = PBXBuildFile; productRef = 24F2B0010000000000000001 /* MMMDCore */; };
 		24F2A0010000000000000002 /* MMMDParserCmark in Frameworks */ = {isa = PBXBuildFile; productRef = 24F2B0010000000000000002 /* MMMDParserCmark */; };
@@ -18,6 +23,11 @@
 
 /* Begin PBXFileReference section */
 		695D18B43E2E4E6E49EBD373 /* MMMDKitMacDemoApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MMMDKitMacDemoApp.swift; sourceTree = "<group>"; };
+		B20000000000000000000001 /* MacChatFeedViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacChatFeedViewController.swift; sourceTree = "<group>"; };
+		B20000000000000000000002 /* StaticMacChatFeedViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StaticMacChatFeedViewController.swift; sourceTree = "<group>"; };
+		B20000000000000000000003 /* StreamingMacChatFeedViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StreamingMacChatFeedViewController.swift; sourceTree = "<group>"; };
+		B20000000000000000000004 /* DemoImageLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoImageLoader.swift; sourceTree = "<group>"; };
+		B20000000000000000000005 /* ChatMessageComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatMessageComponents.swift; sourceTree = "<group>"; };
 		69D1ACCAEC197767E1BCCDD5 /* MMMDKitMacDemo.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MMMDKitMacDemo.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		D03BDCB50972711FD5C1C903 /* DemoMarkdownSamples.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoMarkdownSamples.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -66,6 +76,11 @@
 			isa = PBXGroup;
 			children = (
 				695D18B43E2E4E6E49EBD373 /* MMMDKitMacDemoApp.swift */,
+				B20000000000000000000001 /* MacChatFeedViewController.swift */,
+				B20000000000000000000002 /* StaticMacChatFeedViewController.swift */,
+				B20000000000000000000003 /* StreamingMacChatFeedViewController.swift */,
+				B20000000000000000000004 /* DemoImageLoader.swift */,
+				B20000000000000000000005 /* ChatMessageComponents.swift */,
 				5063140AC56EE51700AD4087 /* Shared */,
 				AECCA5E910CCDB9BEB2B0C0F /* Products */,
 				631A547D8B2D58AE64BE9979 /* Frameworks */,
@@ -142,6 +157,11 @@
 			files = (
 				1270727243F082D02DB29FCA /* DemoMarkdownSamples.swift in Sources */,
 				B4B3A3287EC9321282EE1351 /* MMMDKitMacDemoApp.swift in Sources */,
+				B10000000000000000000001 /* MacChatFeedViewController.swift in Sources */,
+				B10000000000000000000002 /* StaticMacChatFeedViewController.swift in Sources */,
+				B10000000000000000000003 /* StreamingMacChatFeedViewController.swift in Sources */,
+				B10000000000000000000004 /* DemoImageLoader.swift in Sources */,
+				B10000000000000000000005 /* ChatMessageComponents.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

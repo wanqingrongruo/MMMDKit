@@ -14,6 +14,11 @@ targets:
     deploymentTarget: "12.0"
     sources:
       - path: MMMDKitMacDemoApp.swift
+      - path: MacChatFeedViewController.swift
+      - path: StaticMacChatFeedViewController.swift
+      - path: StreamingMacChatFeedViewController.swift
+      - path: ChatMessageComponents.swift
+      - path: DemoImageLoader.swift
       - path: ../Shared/DemoMarkdownSamples.swift
         name: DemoMarkdownSamples.swift
     settings:

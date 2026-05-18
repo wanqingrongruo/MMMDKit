@@ -7,6 +7,11 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		A10000000000000000000001 /* ChatFeedViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000001 /* ChatFeedViewController.swift */; };
+		A10000000000000000000002 /* StaticChatFeedViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000002 /* StaticChatFeedViewController.swift */; };
+		A10000000000000000000003 /* StreamingChatFeedViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000003 /* StreamingChatFeedViewController.swift */; };
+		A10000000000000000000004 /* DemoImageLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000004 /* DemoImageLoader.swift */; };
+		A10000000000000000000005 /* ChatMessageComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000005 /* ChatMessageComponents.swift */; };
 		1A54456F3EA49FE3D556BD70 /* MMMDKitiOSDemoApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 07842C048E0455128B178D84 /* MMMDKitiOSDemoApp.swift */; };
 		24F1A0010000000000000001 /* MMMDCore in Frameworks */ = {isa = PBXBuildFile; productRef = 24F1B0010000000000000001 /* MMMDCore */; };
 		24F1A0010000000000000002 /* MMMDParserCmark in Frameworks */ = {isa = PBXBuildFile; productRef = 24F1B0010000000000000002 /* MMMDParserCmark */; };
@@ -18,6 +23,11 @@
 
 /* Begin PBXFileReference section */
 		07842C048E0455128B178D84 /* MMMDKitiOSDemoApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MMMDKitiOSDemoApp.swift; sourceTree = "<group>"; };
+		A20000000000000000000001 /* ChatFeedViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatFeedViewController.swift; sourceTree = "<group>"; };
+		A20000000000000000000002 /* StaticChatFeedViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StaticChatFeedViewController.swift; sourceTree = "<group>"; };
+		A20000000000000000000003 /* StreamingChatFeedViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StreamingChatFeedViewController.swift; sourceTree = "<group>"; };
+		A20000000000000000000004 /* DemoImageLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoImageLoader.swift; sourceTree = "<group>"; };
+		A20000000000000000000005 /* ChatMessageComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatMessageComponents.swift; sourceTree = "<group>"; };
 		92CCCFC42CCDD40FB0F0E885 /* MMMDKitiOSDemo.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MMMDKitiOSDemo.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		E1AD0324D9E8C293585E6811 /* DemoMarkdownSamples.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoMarkdownSamples.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -59,6 +69,11 @@
 			isa = PBXGroup;
 			children = (
 				07842C048E0455128B178D84 /* MMMDKitiOSDemoApp.swift */,
+				A20000000000000000000001 /* ChatFeedViewController.swift */,
+				A20000000000000000000002 /* StaticChatFeedViewController.swift */,
+				A20000000000000000000003 /* StreamingChatFeedViewController.swift */,
+				A20000000000000000000004 /* DemoImageLoader.swift */,
+				A20000000000000000000005 /* ChatMessageComponents.swift */,
 				132FCE88E273172531695FCD /* Shared */,
 				6911F234BDE4617262F7650E /* Products */,
 				AEC8B0EA7ADC658521D140DC /* Frameworks */,
@@ -136,6 +151,11 @@
 			files = (
 				783712FE4890071A4BD53A0D /* DemoMarkdownSamples.swift in Sources */,
 				1A54456F3EA49FE3D556BD70 /* MMMDKitiOSDemoApp.swift in Sources */,
+				A10000000000000000000001 /* ChatFeedViewController.swift in Sources */,
+				A10000000000000000000002 /* StaticChatFeedViewController.swift in Sources */,
+				A10000000000000000000003 /* StreamingChatFeedViewController.swift in Sources */,
+				A10000000000000000000004 /* DemoImageLoader.swift in Sources */,
+				A10000000000000000000005 /* ChatMessageComponents.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -294,11 +294,60 @@ final class MarkdownViewController: NSViewController {
 
 ---
 
-## 6. SwiftUI 包装
+## 6. 内容尺寸测量
+
+如果你在聊天列表、collection view 或自定义气泡中需要提前计算高度，可以使用渲染模块提供的 `MarkdownLayoutEngine`。
+
+### 6.1 测量 Markdown 内容
+
+```swift
+let document = try CmarkMarkdownParser().parse(markdown)
+let configuration = MarkdownConfiguration(codeHighlighter: KeywordCodeHighlighter())
+
+let layout = MarkdownLayoutEngine.measure(
+    document: document,
+    fittingWidth: 320,
+    configuration: configuration
+)
+
+print("内容宽度：\(layout.size.width)")
+print("内容高度：\(layout.size.height)")
+```
+
+`MarkdownLayoutEngine` 只测量 Markdown 内容本身，不包含业务容器的额外 UI，例如头像、标题、气泡内边距、发送状态等。聊天气泡通常可以这样组合：
+
+```swift
+let contentInsets = UIEdgeInsets(top: 10, left: 14, bottom: 12, right: 14)
+let titleHeight: CGFloat = 18
+let titleSpacing: CGFloat = 8
+let maxBubbleWidth = collectionView.bounds.width * 0.9
+
+let markdownLayout = MarkdownLayoutEngine.measure(
+    document: message.document,
+    fittingWidth: maxBubbleWidth - contentInsets.left - contentInsets.right,
+    configuration: configuration
+)
+
+let bubbleSize = CGSize(
+    width: min(markdownLayout.size.width + contentInsets.left + contentInsets.right, maxBubbleWidth),
+    height: contentInsets.top + titleHeight + titleSpacing + markdownLayout.size.height + contentInsets.bottom
+)
+```
+
+### 6.2 使用建议
+
+- UIKit 版本的测量引擎适合列表预排版，内部复用文本排版和块级元素高度计算。
+- AppKit 版本复用 `MarkdownNSView.estimatedHeight`，建议在主线程调用。
+- 测量结果只负责 Markdown 内容，业务容器尺寸仍应由业务侧组合。
+- 如果内容在流式变化，建议配合 `MarkdownRenderDiff.stableBlockCount` 缓存稳定块，减少重复测量。
+
+---
+
+## 7. SwiftUI 包装
 
 MMMDKit 当前提供 UIKit/AppKit 视图。SwiftUI 中可以用 `UIViewRepresentable` 或 `NSViewRepresentable` 包装。
 
-### 6.1 iOS SwiftUI
+### 7.1 iOS SwiftUI
 
 ```swift
 import SwiftUI
@@ -324,7 +373,7 @@ struct MarkdownRepresentable: UIViewRepresentable {
 }
 ```
 
-### 6.2 macOS SwiftUI
+### 7.2 macOS SwiftUI
 
 ```swift
 import SwiftUI
@@ -352,9 +401,9 @@ struct MarkdownRepresentable: NSViewRepresentable {
 
 ---
 
-## 7. 配置项
+## 8. 配置项
 
-### 7.1 交互回调
+### 8.1 交互回调
 
 `MarkdownActions` 集中管理用户交互：
 
@@ -379,7 +428,7 @@ var configuration = MarkdownConfiguration(actions: actions)
 
 macOS 中把 `UIApplication` / `UIPasteboard` 替换为 `NSWorkspace` / `NSPasteboard` 即可。
 
-### 7.2 工具栏按钮
+### 8.2 工具栏按钮
 
 代码块和表格顶部工具栏可控制复制、下载和展开按钮：
 
@@ -393,7 +442,7 @@ let toolbarOptions = ToolbarOptions(
 let configuration = MarkdownConfiguration(toolbarOptions: toolbarOptions)
 ```
 
-### 7.3 主题
+### 8.3 主题
 
 主题使用平台无关的字符串 token，渲染层会把它们映射为系统颜色和字体：
 
@@ -424,7 +473,7 @@ let theme = MarkdownTheme(
 let configuration = MarkdownConfiguration(theme: theme)
 ```
 
-### 7.4 代码高亮
+### 8.4 代码高亮
 
 内置两种高亮器：
 
@@ -451,7 +500,7 @@ struct MyCodeHighlighter: CodeHighlighter {
 
 渲染层会根据 `HighlightToken.scope` 和 `CodeTheme.tokenStyles` 生成最终 attributed string。
 
-### 7.5 图片加载
+### 8.5 图片加载
 
 实现 `ImageLoader` 后注入配置：
 
@@ -466,7 +515,7 @@ struct NetworkImageLoader: ImageLoader {
 let configuration = MarkdownConfiguration(imageLoader: NetworkImageLoader())
 ```
 
-### 7.6 公式渲染
+### 8.6 公式渲染
 
 SPM 引入 UI 模块时，默认会获得 SwiftMath 公式排版。若你需要自定义公式渲染器，实现 `MathRenderer`：
 
@@ -480,7 +529,7 @@ struct PlainMathRenderer: MathRenderer {
 let configuration = MarkdownConfiguration(mathRenderer: PlainMathRenderer())
 ```
 
-### 7.7 插件
+### 8.7 插件
 
 插件用于在渲染前改写 AST：
 
@@ -498,7 +547,7 @@ let configuration = MarkdownConfiguration(plugins: [FooterPlugin()])
 
 ---
 
-## 8. 常见建议
+## 9. 常见建议
 
 - 对完整静态内容使用 `render(_:)`；对 AI delta 使用 `startStreaming(...)` + `appendStreamingText(_:)`。
 - 流式刷新频率不宜过高，`updateInterval` 建议从 `0.06` 到 `0.12` 秒之间调整。
@@ -509,7 +558,7 @@ let configuration = MarkdownConfiguration(plugins: [FooterPlugin()])
 
 ---
 
-## 9. 调试与验证
+## 10. 调试与验证
 
 库目录位于仓库的 `MMMDKit/`。常用验证命令：
 
