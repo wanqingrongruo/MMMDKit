@@ -21,7 +21,7 @@ public final class MathBlockView: UIView {
         }
 
         #if canImport(SwiftMath)
-        if context.mathRenderer == nil {
+        if context.mathRenderer == nil, Thread.isMainThread {
             let label = configuredMathLabel(for: mathBlock, context: context)
             let size = label.intrinsicContentSize
             if label.error == nil {

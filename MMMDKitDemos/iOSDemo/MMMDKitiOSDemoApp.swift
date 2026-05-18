@@ -540,8 +540,8 @@ extension DemoMarkdownViewController: UICollectionViewDataSource, UICollectionVi
             codeBlockMaximumWidth: configuration.codeBlockMaximumWidth
         )
         
-        bubble.configure(model: model, configuration: configuration, context: context)
         cell.host(bubble, width: model.layout.targetWidth, role: model.message.role)
+        bubble.configure(model: model, configuration: configuration, context: context)
         return cell
     }
 
@@ -561,6 +561,7 @@ extension DemoMarkdownViewController: UICollectionViewDataSource, UICollectionVi
 private final class ChatMessageCell: UICollectionViewCell {
     static let reuseIdentifier = "MMMDKit.ChatMessageCell"
     private var hostedBubble: AsyncChatMessageBubbleView?
+    private var activeConstraints: [NSLayoutConstraint] = []
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -572,6 +573,8 @@ private final class ChatMessageCell: UICollectionViewCell {
 
     func host(_ bubble: AsyncChatMessageBubbleView, width: CGFloat, role: DemoChatMessage.Role) {
         if hostedBubble == bubble { return }
+        NSLayoutConstraint.deactivate(activeConstraints)
+        activeConstraints.removeAll()
         hostedBubble?.removeFromSuperview()
         hostedBubble = bubble
         bubble.translatesAutoresizingMaskIntoConstraints = false
@@ -587,12 +590,21 @@ private final class ChatMessageCell: UICollectionViewCell {
         case .user:
             horizontalConstraint = bubble.trailingAnchor.constraint(equalTo: contentView.trailingAnchor)
         }
-        NSLayoutConstraint.activate([
+        activeConstraints = [
             widthConstraint,
             horizontalConstraint,
             bubble.topAnchor.constraint(equalTo: contentView.topAnchor),
             bottomConstraint
-        ])
+        ]
+        NSLayoutConstraint.activate(activeConstraints)
+    }
+
+    override func prepareForReuse() {
+        super.prepareForReuse()
+        NSLayoutConstraint.deactivate(activeConstraints)
+        activeConstraints.removeAll()
+        hostedBubble?.removeFromSuperview()
+        hostedBubble = nil
     }
 }
 
@@ -733,15 +745,13 @@ private final class AsyncLayoutEngine {
     }
 }
 
-private final class AsyncChatMessageBubbleView: UIView, UITextViewDelegate {
+private final class AsyncChatMessageBubbleView: UIView {
     private let bubbleView = UIView()
     private let titleLabel = UILabel()
-    private let textView: UITextView
-    private var subviewOverlays: [(range: NSRange, view: UIView)] = []
+    private let markdownView = MarkdownView()
     var layoutID: UUID?
     
     init(layout: AsyncBubbleLayout) {
-        self.textView = UITextView(frame: .zero, textContainer: layout.textContainer)
         super.init(frame: .zero)
         setupView()
     }
@@ -753,83 +763,46 @@ private final class AsyncChatMessageBubbleView: UIView, UITextViewDelegate {
     private func setupView() {
         layer.drawsAsynchronously = true
         
+        bubbleView.translatesAutoresizingMaskIntoConstraints = false
         bubbleView.layer.cornerRadius = 14
         bubbleView.layer.drawsAsynchronously = true
         addSubview(bubbleView)
         
+        titleLabel.translatesAutoresizingMaskIntoConstraints = false
         titleLabel.font = .preferredFont(forTextStyle: .caption1)
         titleLabel.textColor = .secondaryLabel
         bubbleView.addSubview(titleLabel)
-        
-        textView.isEditable = false
-        textView.isScrollEnabled = false
-        textView.backgroundColor = .clear
-        textView.textContainerInset = UIEdgeInsets(top: 0, left: 14, bottom: 0, right: 14)
-        textView.textContainer.lineFragmentPadding = 0
-        textView.delegate = self
-        textView.layer.drawsAsynchronously = true
-        bubbleView.addSubview(textView)
-    }
-    
-    func textView(_ textView: UITextView, shouldInteractWith textAttachment: NSTextAttachment, in characterRange: NSRange, interaction: UITextItemInteraction) -> Bool {
-        return false // 禁用附件的长按菜单和放大镜，避免重复的悬浮视图
+
+        markdownView.backgroundColor = .clear
+        markdownView.translatesAutoresizingMaskIntoConstraints = false
+        bubbleView.addSubview(markdownView)
+
+        NSLayoutConstraint.activate([
+            bubbleView.leadingAnchor.constraint(equalTo: leadingAnchor),
+            bubbleView.trailingAnchor.constraint(equalTo: trailingAnchor),
+            bubbleView.topAnchor.constraint(equalTo: topAnchor),
+            bubbleView.bottomAnchor.constraint(equalTo: bottomAnchor),
+
+            titleLabel.leadingAnchor.constraint(equalTo: bubbleView.leadingAnchor, constant: 14),
+            titleLabel.trailingAnchor.constraint(equalTo: bubbleView.trailingAnchor, constant: -14),
+            titleLabel.topAnchor.constraint(equalTo: bubbleView.topAnchor, constant: 10),
+
+            markdownView.leadingAnchor.constraint(equalTo: bubbleView.leadingAnchor, constant: 14),
+            markdownView.trailingAnchor.constraint(equalTo: bubbleView.trailingAnchor, constant: -14),
+            markdownView.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 8),
+            markdownView.bottomAnchor.constraint(equalTo: bubbleView.bottomAnchor, constant: -12)
+        ])
     }
     
     func configure(model: MessageLayoutModel, configuration: MarkdownConfiguration, context: RenderContext) {
         if layoutID == model.layout.id { return }
-        let isFirstTime = (layoutID == nil)
         layoutID = model.layout.id
         
         titleLabel.text = model.message.title
         bubbleView.backgroundColor = backgroundColor(for: model.message.role)
-        
-        if !isFirstTime {
-            // Re-configuring an existing view (e.g., streaming). We must update the text view.
-            // Since we cannot replace the textContainer, we update the attributedText which triggers layout on the existing TextKit stack.
-            textView.attributedText = model.layout.attributedText
-        }
-        
-        subviewOverlays.forEach { $0.view.removeFromSuperview() }
-        subviewOverlays.removeAll()
-        
-        for p in model.layout.placeholders {
-            let blockView: UIView
-            switch p.block {
-            case .code(let codeBlock):
-                blockView = CodeBlockView(codeBlock: codeBlock, context: context)
-            case .table(let table):
-                blockView = TableBlockView(table: table, context: context)
-            case .math(let mathBlock):
-                blockView = MathBlockView(mathBlock: mathBlock, context: context)
-            case .html(let htmlBlock):
-                blockView = HTMLBlockView(htmlBlock: htmlBlock, context: context)
-            case .image(let imageBlock):
-                blockView = ImageBlockView(imageBlock: imageBlock, context: context)
-            case .blockquote(let blocks):
-                blockView = BlockquoteBlockView(blocks: blocks, context: context)
-            case .thematicBreak:
-                blockView = ThematicBreakView(context: context)
-            default:
-                continue
-            }
-            blockView.frame = p.exactFrame
-            subviewOverlays.append((p.range, blockView))
-            textView.addSubview(blockView)
-        }
+        markdownView.configuration = configuration
+        markdownView.render(model.message.document)
         setNeedsLayout()
-    }
-    
-    override func layoutSubviews() {
-        super.layoutSubviews()
-        let width = bounds.width
-        bubbleView.frame = bounds
-        
-        let titleFont = UIFont.preferredFont(forTextStyle: .caption1)
-        let titleHeight = ceil(titleFont.lineHeight)
-        titleLabel.frame = CGRect(x: 14, y: 10, width: width - 28, height: titleHeight)
-        
-        let textY = 10 + titleHeight + 8
-        textView.frame = CGRect(x: 0, y: textY, width: width, height: bounds.height - textY)
     }
     
     private func backgroundColor(for role: DemoChatMessage.Role) -> UIColor {
@@ -845,4 +818,3 @@ private final class AsyncChatMessageBubbleView: UIView, UITextViewDelegate {
         }
     }
 }
-    
