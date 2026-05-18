@@ -59,7 +59,3 @@ xcodebuild build -scheme MMMDKitiOSDemo -destination 'generic/platform=iOS Simul
 cd ../macOSDemo
 xcodebuild build -scheme MMMDKitMacDemo -destination 'platform=macOS' -quiet
 ```
-
-## 提交说明
-
-当前 git 根目录是仓库根 `childPlay/`，不是 `MMMDKit/`。如果使用 SourceTree 或其他 Git 客户端，请打开 `childPlay/` 作为工作副本根目录。
