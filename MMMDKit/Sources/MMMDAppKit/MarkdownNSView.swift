@@ -1,5 +1,6 @@
 import Foundation
 import MMMDCore
+@_exported import MMMDStreaming
 
 #if canImport(AppKit)
 import AppKit
@@ -8,6 +9,7 @@ open class MarkdownNSView: NSView {
     public private(set) var document = MarkdownDocument(blocks: [])
     public var configuration = MarkdownConfiguration()
     private let stackView = NSStackView()
+    private var streamingSession: StreamingMarkdownSession?
 
     public override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
@@ -39,6 +41,42 @@ open class MarkdownNSView: NSView {
         rebuildBlocks()
         setAccessibilityLabel(MarkdownTextExtractor.plainText(from: self.document))
         needsLayout = true
+    }
+
+    @discardableResult
+    open func startStreaming(
+        parser: MarkdownParser,
+        parseOptions: ParseOptions = .init(),
+        updateInterval: TimeInterval = 0.08,
+        onUpdate: ((MarkdownRenderDiff) -> Void)? = nil
+    ) -> StreamingMarkdownSession {
+        let session = StreamingMarkdownSession(
+            parser: parser,
+            parseOptions: parseOptions,
+            updateInterval: updateInterval,
+            deliveryQueue: .main
+        )
+        session.onUpdate = { [weak self] diff in
+            guard let self else { return }
+            self.render(diff.document)
+            onUpdate?(diff)
+        }
+        streamingSession = session
+        render(MarkdownDocument(blocks: []))
+        return session
+    }
+
+    open func appendStreamingText(_ delta: String) {
+        streamingSession?.append(delta)
+    }
+
+    open func finishStreaming() {
+        streamingSession?.finish()
+    }
+
+    open func resetStreaming() {
+        streamingSession?.reset()
+        render(MarkdownDocument(blocks: []))
     }
 
     private static var heightCache = NSCache<NSString, NSNumber>()

@@ -84,16 +84,19 @@ if let document = try? parser.parse(markdownText) {
 ```
 
 ### 2.2 流式更新 (Streaming)
-如果你的数据来源于 AI 接口的流式输出，你只需持续解析新的拼接文本，并调用 `updateDocument`，视图会在内部进行 diff 并平滑滚动：
+如果你的数据来源于 AI 接口的流式输出，可以直接启动视图内置的流式会话；之后每次收到新文本片段，只需要追加 delta：
 
 ```swift
-// 当收到新的 chunk 时：
-currentMarkdownText += newChunk
-if let newDocument = try? parser.parse(currentMarkdownText) {
-    // 使用 updateDocument 而不是直接赋值，以获得更平滑的刷新体验
-    markdownView.updateDocument(newDocument)
+markdownView.startStreaming(parser: CmarkMarkdownParser())
+
+for await delta in aiTextStream {
+    markdownView.appendStreamingText(delta)
 }
+
+markdownView.finishStreaming()
 ```
+
+如果你只需要无 UI 的流式解析能力，可以使用 `MMMDStreaming.StreamingMarkdownSession`，通过 `onUpdate` 接收节流后的 `MarkdownRenderDiff`。
 
 ---
 

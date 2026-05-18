@@ -12,6 +12,7 @@ Pod::Spec.new do |s|
   s.dependency "MMMDHighlighter"
   s.dependency "MMMDMath"
   s.dependency "MMMDHTML"
+  s.dependency "MMMDStreaming"
   s.frameworks = "AppKit", "WebKit"
   s.source_files = "Sources/MMMDAppKit/**/*.swift"
 end

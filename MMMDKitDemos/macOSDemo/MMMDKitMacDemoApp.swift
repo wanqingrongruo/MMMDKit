@@ -93,7 +93,7 @@ final class DemoMarkdownViewController: NSViewController, NSCollectionViewDataSo
     private let addConversationButton = NSButton(title: "新增对话", target: nil, action: nil)
     private var configuration: MarkdownConfiguration!
     private var messages: [DemoChatMessage] = []
-    private var streamingProcessor: StreamingMarkdownProcessor?
+    private var streamingSession: StreamingMarkdownSession?
     private var streamingTimer: Timer?
     private var streamingChunks: [String] = []
     private var streamingIndex = 0
@@ -248,7 +248,7 @@ final class DemoMarkdownViewController: NSViewController, NSCollectionViewDataSo
     private func showChatFeed() {
         streamingTimer?.invalidate()
         streamingTimer = nil
-        streamingProcessor = nil
+        streamingSession = nil
         streamingConversationIndex = 0
         currentStreamingAssistantID = nil
         addConversationButton.isHidden = true
@@ -288,15 +288,12 @@ final class DemoMarkdownViewController: NSViewController, NSCollectionViewDataSo
 
         streamingChunks = DemoMarkdownSamples.streamingChunks()
         streamingIndex = 0
-        let processor = StreamingMarkdownProcessor(parser: CmarkMarkdownParser())
-        processor.onDiff = { [weak self] diff in
-            DispatchQueue.main.async {
-                guard let self else { return }
-                self.replaceStreamingAssistant(with: diff.document)
-            }
+        let session = StreamingMarkdownSession(parser: CmarkMarkdownParser(), updateInterval: 0.045)
+        session.onUpdate = { [weak self] diff in
+            self?.replaceStreamingAssistant(with: diff.document)
         }
-        streamingProcessor = processor
-        processor.reset()
+        streamingSession = session
+        session.reset()
 
         streamingTimer = Timer.scheduledTimer(withTimeInterval: 0.045, repeats: true) { [weak self] timer in
             guard let self else {
@@ -305,12 +302,12 @@ final class DemoMarkdownViewController: NSViewController, NSCollectionViewDataSo
             }
 
             guard self.streamingIndex < self.streamingChunks.count else {
-                self.streamingProcessor?.finish()
+                self.streamingSession?.finish()
                 timer.invalidate()
                 return
             }
 
-            self.streamingProcessor?.append(self.streamingChunks[self.streamingIndex])
+            self.streamingSession?.append(self.streamingChunks[self.streamingIndex])
             self.streamingIndex += 1
         }
     }

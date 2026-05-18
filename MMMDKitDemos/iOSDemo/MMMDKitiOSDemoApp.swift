@@ -39,13 +39,11 @@ final class DemoMarkdownViewController: UIViewController {
     private var configuration: MarkdownConfiguration!
     private var messages: [MessageLayoutModel] = []
     private var streamingMessages: [MessageLayoutModel] = []
-    private var streamingProcessor: StreamingMarkdownProcessor?
+    private var streamingSession: StreamingMarkdownSession?
     private var streamingTimer: Timer?
     private var streamingChunks: [String] = []
     private var streamingIndex = 0
     private var pendingStreamingDocument: MarkdownDocument?
-    private var streamingUpdateWorkItem: DispatchWorkItem?
-    private let streamingUpdateInterval: TimeInterval = 0.09
     private var streamingConversationIndex = 0
     private var currentStreamingAssistantID: String?
     private var isApplyingStreamingReload = false
@@ -130,11 +128,13 @@ final class DemoMarkdownViewController: UIViewController {
 
     deinit {
         streamingTimer?.invalidate()
-        streamingUpdateWorkItem?.cancel()
     }
 
     @objc private func modeChanged() {
         if modeControl.selectedSegmentIndex == 0 {
+            streamingTimer?.invalidate()
+            streamingSession = nil
+            pendingStreamingDocument = nil
             addConversationButton.isHidden = true
             messages = DemoMarkdownSamples.makeChatMessages().map {
                 let width = view.bounds.width
@@ -151,7 +151,6 @@ final class DemoMarkdownViewController: UIViewController {
             
             if streamingMessages.isEmpty {
                 appendStreamingConversation(isInitial: true)
-                startStreaming(resetTranscript: false)
             }
         }
     }
@@ -271,6 +270,8 @@ final class DemoMarkdownViewController: UIViewController {
 
     private func startStreaming(resetTranscript: Bool) {
         streamingTimer?.invalidate()
+        pendingStreamingDocument = nil
+        isApplyingStreamingReload = false
         if resetTranscript {
             streamingMessages.removeAll()
             messages.removeAll()
@@ -279,41 +280,13 @@ final class DemoMarkdownViewController: UIViewController {
         
         if streamingMessages.isEmpty {
             appendStreamingConversation(isInitial: resetTranscript)
-        }
-        
-        streamingChunks = DemoMarkdownSamples.streamingChunks()
-        streamingIndex = 0
-        let processor = StreamingMarkdownProcessor(parser: CmarkMarkdownParser())
-        processor.onDiff = { [weak self] diff in
-            DispatchQueue.main.async {
-                guard let self else { return }
-                self.scheduleStreamingAssistantUpdate(with: diff.document)
-            }
-        }
-        streamingProcessor = processor
-        processor.reset()
-
-        streamingTimer = Timer.scheduledTimer(withTimeInterval: 0.08, repeats: true) { [weak self] timer in
-            guard let self else {
-                timer.invalidate()
-                return
-            }
-
-            guard self.streamingIndex < self.streamingChunks.count else {
-                self.streamingProcessor?.finish()
-                timer.invalidate()
-                return
-            }
-
-            self.streamingProcessor?.append(self.streamingChunks[self.streamingIndex])
-            self.streamingIndex += 1
+        } else {
+            startStreamingOutput()
         }
     }
 
     private func appendStreamingConversation(isInitial: Bool) {
         streamingTimer?.invalidate()
-        streamingUpdateWorkItem?.cancel()
-        streamingUpdateWorkItem = nil
         pendingStreamingDocument = nil
         isApplyingStreamingReload = false
 
@@ -352,17 +325,18 @@ final class DemoMarkdownViewController: UIViewController {
             }
         }
 
+        startStreamingOutput()
+    }
+
+    private func startStreamingOutput() {
         streamingChunks = DemoMarkdownSamples.streamingChunks()
         streamingIndex = 0
-        let processor = StreamingMarkdownProcessor(parser: CmarkMarkdownParser())
-        processor.onDiff = { [weak self] diff in
-            DispatchQueue.main.async {
-                guard let self else { return }
-                self.scheduleStreamingAssistantUpdate(with: diff.document)
-            }
+        let session = StreamingMarkdownSession(parser: CmarkMarkdownParser(), updateInterval: 0.09)
+        session.onUpdate = { [weak self] diff in
+            self?.replaceStreamingAssistant(with: diff.document)
         }
-        streamingProcessor = processor
-        processor.reset()
+        streamingSession = session
+        session.reset()
 
         streamingTimer = Timer.scheduledTimer(withTimeInterval: 0.08, repeats: true) { [weak self] timer in
             guard let self else {
@@ -371,44 +345,19 @@ final class DemoMarkdownViewController: UIViewController {
             }
 
             guard self.streamingIndex < self.streamingChunks.count else {
-                self.streamingProcessor?.finish()
+                self.streamingSession?.finish()
                 timer.invalidate()
                 return
             }
 
-            self.streamingProcessor?.append(self.streamingChunks[self.streamingIndex])
+            self.streamingSession?.append(self.streamingChunks[self.streamingIndex])
             self.streamingIndex += 1
         }
     }
 
-    private func scheduleStreamingAssistantUpdate(with document: MarkdownDocument) {
-        pendingStreamingDocument = document
-        guard streamingUpdateWorkItem == nil else {
-            return
-        }
-
-        let workItem = DispatchWorkItem { [weak self] in
-            self?.applyPendingStreamingAssistantUpdate()
-        }
-        streamingUpdateWorkItem = workItem
-        DispatchQueue.main.asyncAfter(
-            deadline: .now() + .milliseconds(Int(streamingUpdateInterval * 1000)),
-            execute: workItem
-        )
-    }
-
-    private func applyPendingStreamingAssistantUpdate() {
-        streamingUpdateWorkItem = nil
-        guard let document = pendingStreamingDocument else {
-            return
-        }
-        pendingStreamingDocument = nil
-        replaceStreamingAssistant(with: document)
-    }
-
     private func replaceStreamingAssistant(with document: MarkdownDocument) {
         guard !isApplyingStreamingReload else {
-            scheduleStreamingAssistantUpdate(with: document)
+            pendingStreamingDocument = document
             return
         }
         guard let currentStreamingAssistantID else { return }
@@ -447,7 +396,10 @@ final class DemoMarkdownViewController: UIViewController {
                 } completion: { [weak self] _ in
                     guard let self else { return }
                     self.isApplyingStreamingReload = false
-                    if shouldPinToBottom {
+                    if let pendingDocument = self.pendingStreamingDocument {
+                        self.pendingStreamingDocument = nil
+                        self.replaceStreamingAssistant(with: pendingDocument)
+                    } else if shouldPinToBottom {
                         self.scrollToBottom(animated: false)
                     }
                 }
