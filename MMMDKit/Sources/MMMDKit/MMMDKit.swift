@@ -5,6 +5,8 @@
 @_exported import MMMDMath
 @_exported import MMMDHTML
 
+/// MMMDKit umbrella product 的版本信息。
 public enum MMMDKitVersion {
+    /// 当前库版本号。
     public static let current = "0.1.0"
 }

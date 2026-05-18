@@ -1,6 +1,10 @@
 import Foundation
 import MMMDCore
 
+/// 轻量级关键字代码高亮器。
+///
+/// 当前主要识别 Swift 关键字、字符串、数字和注释；其他语言会退化为纯文本。
+/// 业务侧需要更完整语法高亮时，可以实现 `CodeHighlighter` 接入 Tree-sitter 等方案。
 public struct KeywordCodeHighlighter: CodeHighlighter {
     private let swiftKeywords: Set<String> = [
         "actor", "as", "associatedtype", "await", "break", "case", "catch", "class", "continue", "default",
@@ -12,6 +16,7 @@ public struct KeywordCodeHighlighter: CodeHighlighter {
 
     public init() {}
 
+    /// 根据语言和主题生成高亮 token。
     public func highlight(code: String, language: String?, theme: CodeTheme) async throws -> HighlightResult {
         let normalizedLanguage = language?.lowercased()
         guard normalizedLanguage == nil || normalizedLanguage == "swift" else {

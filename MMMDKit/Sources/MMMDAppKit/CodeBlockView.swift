@@ -5,7 +5,9 @@ import MMMDHighlighter
 import AppKit
 
 final class CodeBlockView: NSView {
-    init(codeBlock: CodeBlock, context: RenderContext) {
+    private static let highlightCache = NSCache<NSString, NSAttributedString>()
+
+    init(codeBlock: CodeBlock, context: RenderContext, highlightsCode: Bool = true) {
         super.init(frame: .zero)
         wantsLayer = true
         layer?.backgroundColor = NSColor.textBackgroundColor.cgColor
@@ -34,7 +36,9 @@ final class CodeBlockView: NSView {
         textView.setAccessibilityElement(true)
         textView.setAccessibilityLabel("代码块 \(codeBlock.language ?? "") \(codeBlock.content)")
         stack.addArrangedSubview(textView)
-        applyHighlight(to: textView, codeBlock: codeBlock, context: context)
+        if highlightsCode {
+            applyHighlight(to: textView, codeBlock: codeBlock, context: context)
+        }
 
         addSubview(stack)
         NSLayoutConstraint.activate([
@@ -49,16 +53,32 @@ final class CodeBlockView: NSView {
         let highlighter = context.codeHighlighter ?? PlainCodeHighlighter()
         let theme = context.theme.codeTheme
         let baseFont = textView.font ?? .monospacedSystemFont(ofSize: NSFont.preferredFont(forTextStyle: .body).pointSize - 1, weight: .regular)
+        let cacheKey = Self.highlightCacheKey(for: codeBlock, theme: theme, highlighter: highlighter, fontSize: baseFont.pointSize)
+
+        if let cached = Self.highlightCache.object(forKey: cacheKey) {
+            textView.textStorage?.setAttributedString(cached)
+            return
+        }
 
         Task {
             guard let result = try? await highlighter.highlight(code: codeBlock.content, language: codeBlock.language, theme: theme) else {
                 return
             }
             let attributed = AppKitHighlightRenderer.attributedString(from: result, theme: theme, baseFont: baseFont)
+            Self.highlightCache.setObject(attributed, forKey: cacheKey)
             await MainActor.run {
                 textView.textStorage?.setAttributedString(attributed)
             }
         }
+    }
+
+    private static func highlightCacheKey(
+        for codeBlock: CodeBlock,
+        theme: CodeTheme,
+        highlighter: any CodeHighlighter,
+        fontSize: CGFloat
+    ) -> NSString {
+        "\(String(describing: type(of: highlighter)))|\(theme.name)|\(fontSize)|\(codeBlock.language ?? "")|\(codeBlock.content.hashValue)" as NSString
     }
 
     required init?(coder: NSCoder) {

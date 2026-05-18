@@ -5,6 +5,8 @@ import MMMDHighlighter
 import UIKit
 
 public final class CodeBlockView: UIView {
+    private static let highlightCache = NSCache<NSString, NSAttributedString>()
+
     public static func exactHeight(for codeBlock: CodeBlock, width: CGFloat, context: RenderContext) -> CGFloat {
         let baseFont = UIFont.monospacedSystemFont(ofSize: 14, weight: .regular)
         let codeAttr = NSAttributedString(string: codeBlock.content, attributes: [.font: baseFont])
@@ -23,7 +25,7 @@ public final class CodeBlockView: UIView {
         return ceil(usedRect.height) + headerHeight + CGFloat(8) /* stack spacing */ + context.theme.spacing.codePadding
     }
     
-    public init(codeBlock: CodeBlock, context: RenderContext) {
+    public init(codeBlock: CodeBlock, context: RenderContext, highlightsCode: Bool = true) {
         super.init(frame: .zero)
         mmmdSuppressTextViewAttachmentSelection()
         backgroundColor = UIColor { traitCollection in
@@ -66,7 +68,9 @@ public final class CodeBlockView: UIView {
         )
         textView.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         stack.addArrangedSubview(textView)
-        applyHighlight(to: textView, codeBlock: codeBlock, context: context)
+        if highlightsCode {
+            applyHighlight(to: textView, codeBlock: codeBlock, context: context)
+        }
 
         addSubview(stack)
         let bottom = stack.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -context.theme.spacing.codePadding)
@@ -83,16 +87,32 @@ public final class CodeBlockView: UIView {
         let highlighter = context.codeHighlighter ?? PlainCodeHighlighter()
         let theme = context.theme.codeTheme
         let baseFont = textView.font ?? .monospacedSystemFont(ofSize: UIFont.preferredFont(forTextStyle: .body).pointSize - 1, weight: .regular)
+        let cacheKey = Self.highlightCacheKey(for: codeBlock, theme: theme, highlighter: highlighter, fontSize: baseFont.pointSize)
+
+        if let cached = Self.highlightCache.object(forKey: cacheKey) {
+            textView.attributedText = cached
+            return
+        }
 
         Task {
             guard let result = try? await highlighter.highlight(code: codeBlock.content, language: codeBlock.language, theme: theme) else {
                 return
             }
             let attributed = UIKitHighlightRenderer.attributedString(from: result, theme: theme, baseFont: baseFont)
+            Self.highlightCache.setObject(attributed, forKey: cacheKey)
             await MainActor.run {
                 textView.attributedText = attributed
             }
         }
+    }
+
+    private static func highlightCacheKey(
+        for codeBlock: CodeBlock,
+        theme: CodeTheme,
+        highlighter: any CodeHighlighter,
+        fontSize: CGFloat
+    ) -> NSString {
+        "\(String(describing: type(of: highlighter)))|\(theme.name)|\(fontSize)|\(codeBlock.language ?? "")|\(codeBlock.content.hashValue)" as NSString
     }
 
     required init?(coder: NSCoder) {

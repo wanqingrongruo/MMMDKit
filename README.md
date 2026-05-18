@@ -1,11 +1,11 @@
-# MMMDKIT
+# MMMDKit
 
 这个仓库同时包含 MMMDKit 库源码和独立 Demo 工程。仓库根目录只负责组织项目；真正的 Swift Package 位于 `MMMDKit/`。
 
 ## 目录结构
 
 ```text
-childPlay/
+MMMDKit/
   MMMDKit/        # Swift Package / CocoaPods 库源码
   MMMDKitDemos/   # iOS 与 macOS Demo 工程
 ```
@@ -24,6 +24,8 @@ childPlay/
 
 - `MMMDKit/README.md`
 - `MMMDKit/Docs/UsageTutorial.md`
+
+其中 `MMMDKit/README.md` 适合快速了解模块和最小接入方式；`MMMDKit/Docs/UsageTutorial.md` 包含更完整的 UIKit、AppKit、SwiftUI、流式输出、代码高亮、图片加载、公式渲染和插件示例。
 
 ## MMMDKitDemos
 

@@ -1,8 +1,14 @@
 import Foundation
 
+/// Markdown 文档的根模型。
+///
+/// 解析器会把原始 Markdown 文本转换为 `MarkdownDocument`，渲染层只依赖该结构绘制内容。
 public struct MarkdownDocument: Equatable, Sendable {
+    /// 文档中的块级节点，顺序与源文本一致。
     public var blocks: [MarkdownBlock]
+    /// 原始 Markdown 文本，主要用于复制、缓存 key 和调试。
     public var source: String
+    /// 每个块在原始文本中的位置；当解析器无法提供时，对应元素为 `nil`。
     public var blockSourceRanges: [SourceRange?]
 
     public init(blocks: [MarkdownBlock], source: String = "", blockSourceRanges: [SourceRange?]? = nil) {
@@ -12,6 +18,7 @@ public struct MarkdownDocument: Equatable, Sendable {
     }
 }
 
+/// Markdown 节点在源文本中的行列范围。
 public struct SourceRange: Equatable, Sendable {
     public var startLine: Int
     public var startColumn: Int
@@ -26,6 +33,9 @@ public struct SourceRange: Equatable, Sendable {
     }
 }
 
+/// Markdown 的块级节点类型。
+///
+/// 文档渲染的主体由块级节点组成，例如段落、标题、列表、代码块、表格和公式块。
 public enum MarkdownBlock: Equatable, Sendable {
     case paragraph(InlineContent)
     case heading(level: Int, content: InlineContent)
@@ -40,6 +50,7 @@ public enum MarkdownBlock: Equatable, Sendable {
     case custom(CustomBlock)
 }
 
+/// 块级节点的稳定分类，用于注册自定义渲染器和做缓存分组。
 public enum MarkdownBlockKind: String, Hashable, Sendable {
     case paragraph
     case heading
@@ -72,6 +83,9 @@ public extension MarkdownBlock {
     }
 }
 
+/// Markdown 的行内内容容器。
+///
+/// 段落、标题、表格单元格等文本区域都由若干 `InlineNode` 组成。
 public struct InlineContent: Equatable, Sendable {
     public var nodes: [InlineNode]
 
@@ -84,6 +98,7 @@ public struct InlineContent: Equatable, Sendable {
     }
 }
 
+/// Markdown 的行内节点类型。
 public enum InlineNode: Equatable, Sendable {
     case text(String)
     case emphasis([InlineNode])
@@ -98,6 +113,7 @@ public enum InlineNode: Equatable, Sendable {
     case custom(name: String, payload: String)
 }
 
+/// 行内节点的稳定分类，用于注册自定义行内渲染器。
 public enum InlineNodeKind: String, Hashable, Sendable {
     case text
     case emphasis
@@ -130,10 +146,15 @@ public extension InlineNode {
     }
 }
 
+/// 列表块模型，支持有序、无序和任务列表。
 public struct ListBlock: Equatable, Sendable {
+    /// 列表样式。
     public enum Style: Equatable, Sendable {
+        /// 有序列表，`start` 表示起始序号。
         case ordered(start: Int)
+        /// 无序列表。
         case unordered
+        /// 任务列表，勾选状态保存在 `ListItem.isChecked`。
         case task
     }
 
@@ -146,6 +167,7 @@ public struct ListBlock: Equatable, Sendable {
     }
 }
 
+/// 单个列表项。
 public struct ListItem: Equatable, Sendable {
     public var blocks: [MarkdownBlock]
     public var isChecked: Bool?
@@ -156,9 +178,13 @@ public struct ListItem: Equatable, Sendable {
     }
 }
 
+/// 围栏代码块模型。
 public struct CodeBlock: Equatable, Sendable {
+    /// 代码语言标识，例如 `swift`、`json`。
     public var language: String?
+    /// 代码块正文，不包含围栏标记。
     public var content: String
+    /// 语言标识后的额外元信息。
     public var metadata: String?
 
     public init(language: String? = nil, content: String, metadata: String? = nil) {
@@ -168,6 +194,7 @@ public struct CodeBlock: Equatable, Sendable {
     }
 }
 
+/// 表格块模型。
 public struct TableBlock: Equatable, Sendable {
     public var header: [InlineContent]
     public var rows: [[InlineContent]]
@@ -178,8 +205,11 @@ public struct TableBlock: Equatable, Sendable {
     }
 }
 
+/// 块级数学公式模型。
 public struct MathBlock: Equatable, Sendable {
+    /// LaTeX 源码。
     public var latex: String
+    /// 是否按 display math 模式渲染。
     public var displayMode: Bool
 
     public init(latex: String, displayMode: Bool) {
@@ -188,6 +218,7 @@ public struct MathBlock: Equatable, Sendable {
     }
 }
 
+/// HTML 块模型。
 public struct HTMLBlock: Equatable, Sendable {
     public var html: String
 
@@ -196,8 +227,11 @@ public struct HTMLBlock: Equatable, Sendable {
     }
 }
 
+/// 图片块模型。
 public struct ImageBlock: Equatable, Sendable {
+    /// 图片替代文本。
     public var alt: String
+    /// 图片地址。
     public var url: URL?
 
     public init(alt: String, url: URL?) {
@@ -206,6 +240,7 @@ public struct ImageBlock: Equatable, Sendable {
     }
 }
 
+/// 自定义块模型，用于承载业务扩展节点。
 public struct CustomBlock: Equatable, Sendable {
     public var name: String
     public var payload: String

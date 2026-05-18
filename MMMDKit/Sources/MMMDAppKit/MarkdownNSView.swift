@@ -5,11 +5,18 @@ import MMMDCore
 #if canImport(AppKit)
 import AppKit
 
+/// macOS 的原生 Markdown 渲染视图。
+///
+/// `MarkdownNSView` 使用 AppKit 组件渲染 Markdown 文档，适用于 NSViewController、
+/// NSScrollView 或 SwiftUI `NSViewRepresentable` 包装场景。
 open class MarkdownNSView: NSView {
+    /// 当前视图最近一次渲染的 Markdown 文档。
     public private(set) var document = MarkdownDocument(blocks: [])
+    /// 渲染配置。请在调用 `render(_:)` 或 `startStreaming(...)` 前设置。
     public var configuration = MarkdownConfiguration()
     private let stackView = NSStackView()
     private var streamingSession: StreamingMarkdownSession?
+    private var streamingStableBlockCount: Int?
 
     public override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
@@ -36,13 +43,26 @@ open class MarkdownNSView: NSView {
         ])
     }
 
+    /// 渲染一个完整的 Markdown 文档。
+    ///
+    /// 该方法会应用 `configuration.plugins`，并重建内部 AppKit 视图层级。
     open func render(_ document: MarkdownDocument) {
+        render(document, streamingStableBlockCount: nil)
+    }
+
+    private func render(_ document: MarkdownDocument, streamingStableBlockCount: Int?) {
+        self.streamingStableBlockCount = streamingStableBlockCount
         self.document = (try? configuration.transformedDocument(document)) ?? document
         rebuildBlocks()
         setAccessibilityLabel(MarkdownTextExtractor.plainText(from: self.document))
         needsLayout = true
     }
 
+    /// 启动视图内置的流式渲染会话。
+    ///
+    /// 启动后，外部可持续调用 `appendStreamingText(_:)` 追加上游文本。
+    /// 视图会自动节流刷新，并在流式过程中避免对未稳定尾部代码块反复高亮。
+    /// - Returns: 本次流式会话对象；高级场景可以保留它以直接调用底层 API。
     @discardableResult
     open func startStreaming(
         parser: MarkdownParser,
@@ -58,7 +78,10 @@ open class MarkdownNSView: NSView {
         )
         session.onUpdate = { [weak self] diff in
             guard let self else { return }
-            self.render(diff.document)
+            self.render(
+                diff.document,
+                streamingStableBlockCount: diff.phase == .streaming ? diff.stableBlockCount : nil
+            )
             onUpdate?(diff)
         }
         streamingSession = session
@@ -66,14 +89,17 @@ open class MarkdownNSView: NSView {
         return session
     }
 
+    /// 向当前流式会话追加一段 Markdown 文本。
     open func appendStreamingText(_ delta: String) {
         streamingSession?.append(delta)
     }
 
+    /// 结束当前流式会话，并触发最终完整渲染。
     open func finishStreaming() {
         streamingSession?.finish()
     }
 
+    /// 重置当前流式会话，并清空视图内容。
     open func resetStreaming() {
         streamingSession?.reset()
         render(MarkdownDocument(blocks: []))
@@ -159,8 +185,9 @@ open class MarkdownNSView: NSView {
             let blockView: NSView
             switch block {
             case .code(let codeBlock):
+                let highlightsCode = streamingStableBlockCount.map { currentBlockIndex < $0 } ?? true
                 blockView = MarkdownNSMaxWidthBlockContainer(
-                    contentView: CodeBlockView(codeBlock: codeBlock, context: context),
+                    contentView: CodeBlockView(codeBlock: codeBlock, context: context, highlightsCode: highlightsCode),
                     maximumWidth: context.codeBlockMaximumWidth.map { CGFloat($0) }
                 )
             case .table(let table):

@@ -220,6 +220,9 @@ public struct MarkdownConfiguration: Sendable {
     }
 }
 
+/// 块级渲染器注册表。
+///
+/// 当前注册表保存的是渲染器名称，用于把解析出的块类型与业务侧自定义渲染能力建立映射。
 public struct BlockRendererRegistry: Sendable {
     private var rendererNames: [MarkdownBlockKind: String]
 
@@ -227,15 +230,20 @@ public struct BlockRendererRegistry: Sendable {
         self.rendererNames = rendererNames
     }
 
+    /// 注册某类块级节点对应的渲染器名称。
     public mutating func register(kind: MarkdownBlockKind, rendererName: String) {
         rendererNames[kind] = rendererName
     }
 
+    /// 查询某类块级节点对应的渲染器名称。
     public func rendererName(for kind: MarkdownBlockKind) -> String? {
         rendererNames[kind]
     }
 }
 
+/// 行内渲染器注册表。
+///
+/// 用于把行内节点类型与业务侧自定义行内渲染能力建立映射。
 public struct InlineRendererRegistry: Sendable {
     private var rendererNames: [InlineNodeKind: String]
 
@@ -243,10 +251,12 @@ public struct InlineRendererRegistry: Sendable {
         self.rendererNames = rendererNames
     }
 
+    /// 注册某类行内节点对应的渲染器名称。
     public mutating func register(kind: InlineNodeKind, rendererName: String) {
         rendererNames[kind] = rendererName
     }
 
+    /// 查询某类行内节点对应的渲染器名称。
     public func rendererName(for kind: InlineNodeKind) -> String? {
         rendererNames[kind]
     }
