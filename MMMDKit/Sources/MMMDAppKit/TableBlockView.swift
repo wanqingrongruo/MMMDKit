@@ -84,6 +84,12 @@ final class TableBlockView: NSView {
         return toolbarHeight + max(minimumRowHeight, contentHeight) + horizontalScrollerHeight
     }
 
+    static func preferredWidth(for table: TableBlock) -> CGFloat {
+        let rows = normalizedRows(for: table)
+        let columnCount = max(rows.map(\.cells.count).max() ?? 0, 1)
+        return CGFloat(columnCount) * minimumCellWidth
+    }
+
     private static func normalizedRows(for table: TableBlock) -> [(cells: [InlineContent], isHeader: Bool)] {
         var rows: [(cells: [InlineContent], isHeader: Bool)] = []
         if !table.header.isEmpty {

@@ -27,6 +27,8 @@ MMMDKit/
 
 其中 `MMMDKit/README.md` 适合快速了解模块和最小接入方式；`MMMDKit/Docs/UsageTutorial.md` 包含更完整的 UIKit、AppKit、SwiftUI、流式输出、代码高亮、图片加载、公式渲染和插件示例。
 
+当前 AppKit 渲染层已统一 `MarkdownNSView`、`MarkdownCollectionViewHost` 和 `MarkdownLayoutEngine` 的布局测量链路。macOS 列表或聊天气泡接入时，建议先使用 `MarkdownLayoutEngine.measure(...)` 生成业务 layout model，再交给 `NSCollectionView` 消费高度。
+
 ## MMMDKitDemos
 
 `MMMDKitDemos/` 是独立 Demo 区域，不属于 Swift Package 内容，因此外部项目通过 SPM 引入 `MMMDKit` 时不会在 package 中看到 Demo 工程。
@@ -40,6 +42,8 @@ Demo 包含：
 两个 Demo 都通过本地 Swift Package Manager 路径 `../../MMMDKit` 引入库。详情见：
 
 - `MMMDKitDemos/README.md`
+- `MMMDKitDemos/iOSDemo/README.md`
+- `MMMDKitDemos/macOSDemo/README.md`
 
 ## 公式渲染差异
 

@@ -7,16 +7,24 @@ import AppKit
 
 /// macOS 的原生 Markdown 渲染视图。
 ///
-/// `MarkdownNSView` 使用 AppKit 组件渲染 Markdown 文档，适用于 NSViewController、
-/// NSScrollView 或 SwiftUI `NSViewRepresentable` 包装场景。
+/// `MarkdownNSView` 使用 AppKit 组件渲染 Markdown 文档。它自身不创建滚动容器，
+/// 因此适合嵌入聊天气泡、`NSScrollView` 或 SwiftUI `NSViewRepresentable` 中。
 open class MarkdownNSView: NSView {
     /// 当前视图最近一次渲染的 Markdown 文档。
     public private(set) var document = MarkdownDocument(blocks: [])
     /// 渲染配置。请在调用 `render(_:)` 或 `startStreaming(...)` 前设置。
     public var configuration = MarkdownConfiguration()
-    private let stackView = NSStackView()
+
+    private var renderItems: [MarkdownRenderItem] = []
+    private var itemViews: [NSView] = []
+    private var cachedLayout: AppKitMarkdownLayout?
     private var streamingSession: StreamingMarkdownSession?
     private var streamingStableBlockCount: Int?
+    private var lastLaidOutWidth: CGFloat = 0
+
+    open override var isFlipped: Bool {
+        true
+    }
 
     public override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
@@ -30,22 +38,12 @@ open class MarkdownNSView: NSView {
 
     private func setupView() {
         setAccessibilityElement(false)
-        stackView.orientation = .vertical
-        stackView.alignment = .width
-        stackView.spacing = configuration.theme.spacing.blockSpacing
-        stackView.translatesAutoresizingMaskIntoConstraints = false
-        addSubview(stackView)
-        NSLayoutConstraint.activate([
-            stackView.leadingAnchor.constraint(equalTo: leadingAnchor),
-            stackView.trailingAnchor.constraint(equalTo: trailingAnchor),
-            stackView.topAnchor.constraint(equalTo: topAnchor),
-            stackView.bottomAnchor.constraint(equalTo: bottomAnchor)
-        ])
+        postsFrameChangedNotifications = true
     }
 
     /// 渲染一个完整的 Markdown 文档。
     ///
-    /// 该方法会应用 `configuration.plugins`，并重建内部 AppKit 视图层级。
+    /// 该方法会应用 `configuration.plugins`，并使用统一的 AppKit 渲染计划重建块视图。
     open func render(_ document: MarkdownDocument) {
         render(document, streamingStableBlockCount: nil)
     }
@@ -53,9 +51,36 @@ open class MarkdownNSView: NSView {
     private func render(_ document: MarkdownDocument, streamingStableBlockCount: Int?) {
         self.streamingStableBlockCount = streamingStableBlockCount
         self.document = (try? configuration.transformedDocument(document)) ?? document
-        rebuildBlocks()
+        renderItems = MarkdownRenderPlanBuilder.makeItems(from: self.document)
+        rebuildViews()
+        cachedLayout = nil
         setAccessibilityLabel(MarkdownTextExtractor.plainText(from: self.document))
+        invalidateIntrinsicContentSize()
         needsLayout = true
+    }
+
+    open override var intrinsicContentSize: NSSize {
+        let width = measurementWidth
+        let layout = layoutForWidth(width)
+        return NSSize(width: NSView.noIntrinsicMetric, height: layout.size.height)
+    }
+
+    open override func layout() {
+        super.layout()
+        let width = measurementWidth
+        let widthChanged = abs(lastLaidOutWidth - width) >= 0.5
+        let layout = layoutForWidth(width)
+        cachedLayout = layout
+        lastLaidOutWidth = width
+
+        for (index, layoutItem) in layout.items.enumerated() where index < itemViews.count {
+            itemViews[index].frame = layoutItem.frame
+            itemViews[index].needsLayout = true
+            itemViews[index].layoutSubtreeIfNeeded()
+        }
+        if widthChanged {
+            invalidateIntrinsicContentSize()
+        }
     }
 
     /// 启动视图内置的流式渲染会话。
@@ -105,166 +130,47 @@ open class MarkdownNSView: NSView {
         render(MarkdownDocument(blocks: []))
     }
 
-    private static var heightCache = NSCache<NSString, NSNumber>()
-    private static let sizingView: MarkdownNSView = {
-        let view = MarkdownNSView()
-        view.translatesAutoresizingMaskIntoConstraints = false
-        return view
-    }()
-
     public static func estimatedHeight(for document: MarkdownDocument, width: CGFloat, configuration: MarkdownConfiguration) -> CGFloat {
-        let cacheKey = "\(document.source.hashValue)_\(width)" as NSString
-        if let cached = heightCache.object(forKey: cacheKey) {
-            return CGFloat(cached.floatValue)
-        }
-        
-        sizingView.configuration = configuration
-        sizingView.render(document)
-        
-        let widthConstraint = sizingView.widthAnchor.constraint(equalToConstant: width)
-        widthConstraint.isActive = true
-        sizingView.layoutSubtreeIfNeeded()
-        
-        let totalHeight = ceil(sizingView.fittingSize.height)
-        widthConstraint.isActive = false
-        
-        heightCache.setObject(NSNumber(value: Float(totalHeight)), forKey: cacheKey)
-        return totalHeight
+        let transformedDocument = (try? configuration.transformedDocument(document)) ?? document
+        let context = AppKitMarkdownContextBuilder.makeContext(configuration: configuration)
+        let items = MarkdownRenderPlanBuilder.makeItems(from: transformedDocument)
+        return AppKitMarkdownBlockMeasurer.layout(
+            items: items,
+            fittingWidth: max(1, width),
+            context: context
+        ).size.height
     }
 
-    private static func textHeight(_ text: String, width: CGFloat, font: NSFont) -> CGFloat {
-        let rect = (text as NSString).boundingRect(
-            with: NSSize(width: max(1, width), height: CGFloat.greatestFiniteMagnitude),
-            options: [.usesLineFragmentOrigin, .usesFontLeading],
-            attributes: [.font: font]
+    private var measurementWidth: CGFloat {
+        max(1, bounds.width)
+    }
+
+    private func layoutForWidth(_ width: CGFloat) -> AppKitMarkdownLayout {
+        if let cachedLayout, abs(lastLaidOutWidth - width) < 0.5 {
+            return cachedLayout
+        }
+        let context = AppKitMarkdownContextBuilder.makeContext(configuration: configuration)
+        return AppKitMarkdownBlockMeasurer.layout(
+            items: renderItems,
+            fittingWidth: width,
+            context: context
         )
-        return ceil(rect.height)
     }
 
-    private func rebuildBlocks() {
-        stackView.arrangedSubviews.forEach { view in
-            stackView.removeArrangedSubview(view)
-            view.removeFromSuperview()
+    private func rebuildViews() {
+        itemViews.forEach { $0.removeFromSuperview() }
+        let context = AppKitMarkdownContextBuilder.makeContext(configuration: configuration)
+        itemViews = renderItems.map {
+            let view = AppKitMarkdownBlockViewFactory.makeView(
+                for: $0,
+                documentSourceHash: document.source.hashValue,
+                context: context,
+                streamingStableBlockCount: streamingStableBlockCount
+            )
+            view.autoresizingMask = []
+            addSubview(view)
+            return view
         }
-
-        let context = RenderContext(
-            theme: configuration.theme,
-            actions: configuration.actions,
-            toolbarOptions: configuration.toolbarOptions,
-            blockRendererRegistry: configuration.blockRendererRegistry,
-            inlineRendererRegistry: configuration.inlineRendererRegistry,
-            codeHighlighter: configuration.codeHighlighter,
-            mathRenderer: configuration.mathRenderer,
-            imageLoader: configuration.imageLoader,
-            codeBlockMaximumWidth: configuration.codeBlockMaximumWidth
-        )
-
-        var textBlocks: [MarkdownBlock] = []
-
-        var currentBlockIndex = 0
-
-        func flushTextBlocks() {
-            guard !textBlocks.isEmpty else { return }
-            let cacheKey = "\(document.source.hashValue)_\(currentBlockIndex)"
-            let combinedView = TextBlockView(blocks: textBlocks, context: context, cacheKey: cacheKey)
-            combinedView.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
-            stackView.addArrangedSubview(combinedView)
-            currentBlockIndex += textBlocks.count
-            textBlocks.removeAll()
-        }
-
-        for block in document.blocks {
-            switch block {
-            case .heading, .paragraph, .list:
-                textBlocks.append(block)
-                continue
-            default:
-                flushTextBlocks()
-            }
-
-            let blockView: NSView
-            switch block {
-            case .code(let codeBlock):
-                let highlightsCode = streamingStableBlockCount.map { currentBlockIndex < $0 } ?? true
-                blockView = MarkdownNSMaxWidthBlockContainer(
-                    contentView: CodeBlockView(codeBlock: codeBlock, context: context, highlightsCode: highlightsCode),
-                    maximumWidth: context.codeBlockMaximumWidth.map { CGFloat($0) }
-                )
-            case .table(let table):
-                let tableView = TableBlockView(table: table, context: context)
-                blockView = MarkdownNSShrinkWrappedBlockContainer(
-                    contentView: tableView,
-                    preferredWidth: tableView.preferredContentWidth
-                )
-            case .math(let mathBlock):
-                blockView = MathBlockView(mathBlock: mathBlock, context: context)
-            case .html(let htmlBlock):
-                blockView = HTMLBlockView(htmlBlock: htmlBlock, context: context)
-            case .image(let imageBlock):
-                blockView = ImageBlockView(imageBlock: imageBlock, context: context)
-            case .blockquote(let blocks):
-                blockView = BlockquoteBlockView(blocks: blocks, context: context)
-            case .thematicBreak:
-                blockView = ThematicBreakView(context: context)
-            default:
-                currentBlockIndex += 1
-                continue
-            }
-            blockView.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
-            stackView.addArrangedSubview(blockView)
-            currentBlockIndex += 1
-        }
-        flushTextBlocks()
-    }
-}
-
-private final class MarkdownNSMaxWidthBlockContainer: NSView {
-    init(contentView: NSView, maximumWidth: CGFloat?) {
-        super.init(frame: .zero)
-        contentView.translatesAutoresizingMaskIntoConstraints = false
-        addSubview(contentView)
-
-        let fillWidth = contentView.trailingAnchor.constraint(equalTo: trailingAnchor)
-        fillWidth.priority = .defaultHigh
-
-        var constraints = [
-            contentView.leadingAnchor.constraint(equalTo: leadingAnchor),
-            contentView.topAnchor.constraint(equalTo: topAnchor),
-            contentView.bottomAnchor.constraint(equalTo: bottomAnchor),
-            contentView.trailingAnchor.constraint(lessThanOrEqualTo: trailingAnchor),
-            fillWidth
-        ]
-        if let maximumWidth, maximumWidth > 0 {
-            constraints.append(contentView.widthAnchor.constraint(lessThanOrEqualToConstant: maximumWidth))
-        }
-        NSLayoutConstraint.activate(constraints)
-    }
-
-    required init?(coder: NSCoder) {
-        super.init(coder: coder)
-    }
-}
-
-private final class MarkdownNSShrinkWrappedBlockContainer: NSView {
-    init(contentView: NSView, preferredWidth: CGFloat) {
-        super.init(frame: .zero)
-        contentView.translatesAutoresizingMaskIntoConstraints = false
-        addSubview(contentView)
-
-        let preferredWidthConstraint = contentView.widthAnchor.constraint(equalToConstant: preferredWidth)
-        preferredWidthConstraint.priority = .defaultHigh
-
-        NSLayoutConstraint.activate([
-            contentView.leadingAnchor.constraint(equalTo: leadingAnchor),
-            contentView.topAnchor.constraint(equalTo: topAnchor),
-            contentView.bottomAnchor.constraint(equalTo: bottomAnchor),
-            contentView.trailingAnchor.constraint(lessThanOrEqualTo: trailingAnchor),
-            preferredWidthConstraint
-        ])
-    }
-
-    required init?(coder: NSCoder) {
-        super.init(coder: coder)
     }
 }
 #else

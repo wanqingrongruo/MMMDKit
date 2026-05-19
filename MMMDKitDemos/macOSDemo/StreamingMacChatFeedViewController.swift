@@ -9,8 +9,10 @@ final class StreamingMacChatFeedViewController: MacChatFeedViewController {
     private var streamingTimer: Timer?
     private var streamingChunks: [String] = []
     private var streamingIndex = 0
+    private var pendingStreamingDocument: MarkdownDocument?
     private var streamingConversationIndex = 0
     private var currentStreamingAssistantID: String?
+    private var isApplyingStreamingReload = false
     private var didStartInitialConversation = false
 
     override var headerView: NSView? { addConversationButton }
@@ -39,13 +41,15 @@ final class StreamingMacChatFeedViewController: MacChatFeedViewController {
 
     private func appendStreamingConversation() {
         streamingTimer?.invalidate()
+        pendingStreamingDocument = nil
+        isApplyingStreamingReload = false
 
         streamingConversationIndex += 1
         let assistant = DemoMarkdownSamples.makeStreamingAssistantPlaceholder(index: streamingConversationIndex)
         currentStreamingAssistantID = assistant.id
         let insertionStart = messages.count
-        messages.append(DemoMarkdownSamples.makeStreamingUserMessage(index: streamingConversationIndex))
-        messages.append(assistant)
+        messages.append(buildLayoutModel(for: DemoMarkdownSamples.makeStreamingUserMessage(index: streamingConversationIndex)))
+        messages.append(buildLayoutModel(for: assistant))
         let insertedIndexPaths: Set<IndexPath> = [
             IndexPath(item: insertionStart, section: 0),
             IndexPath(item: insertionStart + 1, section: 0)
@@ -83,18 +87,34 @@ final class StreamingMacChatFeedViewController: MacChatFeedViewController {
     }
 
     private func replaceStreamingAssistant(with document: MarkdownDocument) {
-        guard let currentStreamingAssistantID,
-              let index = messages.lastIndex(where: { $0.id == currentStreamingAssistantID }) else {
+        guard !isApplyingStreamingReload else {
+            pendingStreamingDocument = document
             return
         }
-        messages[index] = DemoChatMessage(
+        guard let currentStreamingAssistantID,
+              let index = messages.lastIndex(where: { $0.message.id == currentStreamingAssistantID }) else {
+            return
+        }
+        let updatedMessage = DemoChatMessage(
             id: currentStreamingAssistantID,
             role: .assistant,
             title: "AI 助手 \(String(format: "%02d", streamingConversationIndex))",
             markdown: document.source,
             document: document
         )
+        messages[index] = buildLayoutModel(for: updatedMessage)
+        let shouldPinToBottom = isNearBottom()
+        isApplyingStreamingReload = true
         reloadItem(at: IndexPath(item: index, section: 0))
-        scrollToBottom()
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
+            self.isApplyingStreamingReload = false
+            if let pendingStreamingDocument = self.pendingStreamingDocument {
+                self.pendingStreamingDocument = nil
+                self.replaceStreamingAssistant(with: pendingStreamingDocument)
+            } else if shouldPinToBottom {
+                self.scrollToBottom()
+            }
+        }
     }
 }

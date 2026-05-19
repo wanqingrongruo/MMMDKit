@@ -3,15 +3,17 @@ import MMMDCore
 #if canImport(AppKit)
 import AppKit
 
+/// 适合长文档的 AppKit Markdown 滚动容器。
+///
+/// 与 `MarkdownNSView` 使用同一套 render plan 和测量器；区别在于这里用 `NSCollectionView`
+/// 承载每个 block item，适合未来做长文档虚拟化。
 open class MarkdownCollectionViewHost: NSView, NSCollectionViewDataSource, NSCollectionViewDelegateFlowLayout {
-    private enum RenderableItem {
-        case single(MarkdownBlock)
-        case textGroup([MarkdownBlock])
-    }
-
     private var document = MarkdownDocument(blocks: [])
-    private var renderableItems: [RenderableItem] = []
+    private var renderItems: [MarkdownRenderItem] = []
     private var configuration = MarkdownConfiguration()
+    private var cachedLayout: AppKitMarkdownLayout?
+    private var cachedWidth: CGFloat = 0
+
     private let collectionView = NSCollectionView()
     private let scrollView = NSScrollView()
     private let collectionLayout = SingleColumnCollectionViewFlowLayout()
@@ -29,62 +31,46 @@ open class MarkdownCollectionViewHost: NSView, NSCollectionViewDataSource, NSCol
     open func render(_ document: MarkdownDocument, configuration: MarkdownConfiguration = .init()) {
         self.configuration = configuration
         self.document = (try? configuration.transformedDocument(document)) ?? document
-        
-        var items: [RenderableItem] = []
-        var currentTextGroup: [MarkdownBlock] = []
-        
-        func flushTextGroup() {
-            if !currentTextGroup.isEmpty {
-                items.append(.textGroup(currentTextGroup))
-                currentTextGroup.removeAll()
-            }
-        }
-        
-        for block in self.document.blocks {
-            switch block {
-            case .heading, .paragraph, .list:
-                currentTextGroup.append(block)
-            default:
-                flushTextGroup()
-                items.append(.single(block))
-            }
-        }
-        flushTextGroup()
-        self.renderableItems = items
-        
+        renderItems = MarkdownRenderPlanBuilder.makeItems(from: self.document)
+        cachedLayout = nil
         collectionLayout.invalidateLayout()
         collectionView.reloadData()
     }
 
     public func collectionView(_ collectionView: NSCollectionView, numberOfItemsInSection section: Int) -> Int {
-        renderableItems.count
+        renderItems.count
     }
 
     public func collectionView(_ collectionView: NSCollectionView, itemForRepresentedObjectAt indexPath: IndexPath) -> NSCollectionViewItem {
         let item = collectionView.makeItem(withIdentifier: BlockItem.identifier, for: indexPath) as? BlockItem ?? BlockItem()
-        let context = RenderContext(
-            theme: configuration.theme,
-            actions: configuration.actions,
-            toolbarOptions: configuration.toolbarOptions,
-            blockRendererRegistry: configuration.blockRendererRegistry,
-            inlineRendererRegistry: configuration.inlineRendererRegistry,
-            codeHighlighter: configuration.codeHighlighter,
-            mathRenderer: configuration.mathRenderer,
-            imageLoader: configuration.imageLoader,
-            codeBlockMaximumWidth: configuration.codeBlockMaximumWidth
+        let context = AppKitMarkdownContextBuilder.makeContext(configuration: configuration)
+        let blockView = AppKitMarkdownBlockViewFactory.makeView(
+            for: renderItems[indexPath.item],
+            documentSourceHash: document.source.hashValue,
+            context: context,
+            streamingStableBlockCount: nil
         )
-        
-        let blockView: NSView
-        switch renderableItems[indexPath.item] {
-        case .single(let block):
-            blockView = self.blockView(for: block, context: context)
-        case .textGroup(let blocks):
-            let cacheKey = "\(document.source.hashValue)_\(indexPath.item)"
-            blockView = TextBlockView(blocks: blocks, context: context, cacheKey: cacheKey)
-        }
-        
         item.host(blockView)
         return item
+    }
+
+    public func collectionView(
+        _ collectionView: NSCollectionView,
+        layout collectionViewLayout: NSCollectionViewLayout,
+        sizeForItemAt indexPath: IndexPath
+    ) -> NSSize {
+        let width = contentWidth(for: collectionView)
+        let layout = layoutForWidth(width)
+        guard indexPath.item < layout.items.count else {
+            return NSSize(width: width, height: 1)
+        }
+        return NSSize(width: width, height: layout.items[indexPath.item].frame.height)
+    }
+
+    open override func layout() {
+        super.layout()
+        cachedLayout = nil
+        collectionLayout.invalidateLayout()
     }
 
     private func setupCollectionView() {
@@ -111,149 +97,22 @@ open class MarkdownCollectionViewHost: NSView, NSCollectionViewDataSource, NSCol
         ])
     }
 
-    open override func layout() {
-        super.layout()
-        collectionLayout.invalidateLayout()
+    private func contentWidth(for collectionView: NSCollectionView) -> CGFloat {
+        max(1, collectionView.enclosingScrollView?.contentView.bounds.width ?? collectionView.bounds.width)
     }
 
-    public func collectionView(
-        _ collectionView: NSCollectionView,
-        layout collectionViewLayout: NSCollectionViewLayout,
-        sizeForItemAt indexPath: IndexPath
-    ) -> NSSize {
-        let visibleWidth = collectionView.enclosingScrollView?.contentView.bounds.width ?? collectionView.bounds.width
-        let width = max(1, visibleWidth)
-        let item = renderableItems[indexPath.item]
-        
-        let height: CGFloat
-        switch item {
-        case .single(let block):
-            height = self.height(for: block, width: width)
-        case .textGroup(let blocks):
-            let heights = blocks.map { self.height(for: $0, width: width) }
-            let spacing = max(0, CGFloat(max(0, blocks.count - 1)) * configuration.theme.spacing.blockSpacing)
-            height = heights.reduce(0, +) + spacing
+    private func layoutForWidth(_ width: CGFloat) -> AppKitMarkdownLayout {
+        if let cachedLayout, abs(cachedWidth - width) < 0.5 {
+            return cachedLayout
         }
-        return NSSize(width: width, height: height)
-    }
-
-    private func blockView(for block: MarkdownBlock, context: RenderContext) -> NSView {
-        switch block {
-        case .code(let codeBlock):
-            return MaxWidthBlockContainer(
-                contentView: CodeBlockView(codeBlock: codeBlock, context: context),
-                maximumWidth: context.codeBlockMaximumWidth.map { CGFloat($0) }
-            )
-        case .table(let table):
-            let tableView = TableBlockView(table: table, context: context)
-            return ShrinkWrappedBlockContainer(
-                contentView: tableView,
-                preferredWidth: tableView.preferredContentWidth
-            )
-        case .math(let mathBlock):
-            return MathBlockView(mathBlock: mathBlock, context: context)
-        case .html(let htmlBlock):
-            return HTMLBlockView(htmlBlock: htmlBlock, context: context)
-        case .image(let imageBlock):
-            return ImageBlockView(imageBlock: imageBlock, context: context)
-        case .blockquote(let blocks):
-            return BlockquoteBlockView(blocks: blocks, context: context)
-        case .thematicBreak:
-            return ThematicBreakView(context: context)
-        default:
-            return NSTextField(wrappingLabelWithString: MarkdownTextExtractor.plainText(from: block))
-        }
-    }
-
-    private func height(for block: MarkdownBlock, width: CGFloat) -> CGFloat {
-        let availableWidth = max(1, width - 8)
-        switch block {
-        case .heading:
-            return max(34, textHeight(MarkdownTextExtractor.plainText(from: block), width: availableWidth, font: .preferredFont(forTextStyle: .headline)) + 8)
-        case .paragraph:
-            return max(28, textHeight(MarkdownTextExtractor.plainText(from: block), width: availableWidth, font: .preferredFont(forTextStyle: .body)) + 8)
-        case .list(let list):
-            let rowHeights = list.items.map { item in
-                textHeight(item.blocks.map(MarkdownTextExtractor.plainText(from:)).joined(separator: "\n"), width: max(1, availableWidth - 40), font: .preferredFont(forTextStyle: .body)) + 6
-            }
-            return max(32, rowHeights.reduce(0, +) + 8)
-        case .blockquote:
-            return max(36, textHeight(MarkdownTextExtractor.plainText(from: block), width: max(1, availableWidth - 16), font: .preferredFont(forTextStyle: .body)) + 12)
-        case .code(let codeBlock):
-            let lineCount = max(1, codeBlock.content.split(separator: "\n", omittingEmptySubsequences: false).count)
-            return CGFloat(lineCount) * 18 + 58
-        case .table(let table):
-            return TableBlockView.height(for: table)
-        case .math:
-            return max(38, textHeight(MarkdownTextExtractor.plainText(from: block), width: availableWidth, font: .preferredFont(forTextStyle: .body)) + 12)
-        case .html:
-            return 120
-        case .image:
-            return 180
-        case .thematicBreak:
-            return 1
-        default:
-            return max(28, textHeight(MarkdownTextExtractor.plainText(from: block), width: availableWidth, font: .preferredFont(forTextStyle: .body)) + 8)
-        }
-    }
-
-    private func textHeight(_ text: String, width: CGFloat, font: NSFont) -> CGFloat {
-        let rect = (text as NSString).boundingRect(
-            with: NSSize(width: width, height: CGFloat.greatestFiniteMagnitude),
-            options: [.usesLineFragmentOrigin, .usesFontLeading],
-            attributes: [.font: font]
+        let layout = AppKitMarkdownBlockMeasurer.layout(
+            items: renderItems,
+            fittingWidth: width,
+            context: AppKitMarkdownContextBuilder.makeContext(configuration: configuration)
         )
-        return ceil(rect.height)
-    }
-}
-
-private final class MaxWidthBlockContainer: NSView {
-    init(contentView: NSView, maximumWidth: CGFloat?) {
-        super.init(frame: .zero)
-        contentView.translatesAutoresizingMaskIntoConstraints = false
-        addSubview(contentView)
-
-        let fillWidth = contentView.trailingAnchor.constraint(equalTo: trailingAnchor)
-        fillWidth.priority = .defaultHigh
-
-        var constraints = [
-            contentView.leadingAnchor.constraint(equalTo: leadingAnchor),
-            contentView.topAnchor.constraint(equalTo: topAnchor),
-            contentView.bottomAnchor.constraint(equalTo: bottomAnchor),
-            contentView.trailingAnchor.constraint(lessThanOrEqualTo: trailingAnchor),
-            fillWidth
-        ]
-        if let maximumWidth, maximumWidth > 0 {
-            constraints.append(contentView.widthAnchor.constraint(lessThanOrEqualToConstant: maximumWidth))
-        }
-        NSLayoutConstraint.activate(constraints)
-    }
-
-    required init?(coder: NSCoder) {
-        super.init(coder: coder)
-    }
-}
-
-private final class ShrinkWrappedBlockContainer: NSView {
-    init(contentView: NSView, preferredWidth: CGFloat) {
-        super.init(frame: .zero)
-        contentView.translatesAutoresizingMaskIntoConstraints = false
-        addSubview(contentView)
-
-        let preferredWidthConstraint = contentView.widthAnchor.constraint(equalToConstant: preferredWidth)
-        preferredWidthConstraint.priority = .defaultHigh
-
-        NSLayoutConstraint.activate([
-            contentView.leadingAnchor.constraint(equalTo: leadingAnchor),
-            contentView.topAnchor.constraint(equalTo: topAnchor),
-            contentView.bottomAnchor.constraint(equalTo: bottomAnchor),
-            contentView.trailingAnchor.constraint(lessThanOrEqualTo: trailingAnchor),
-            preferredWidthConstraint
-        ])
-    }
-
-    required init?(coder: NSCoder) {
-        super.init(coder: coder)
+        cachedLayout = layout
+        cachedWidth = width
+        return layout
     }
 }
 
@@ -277,10 +136,9 @@ private final class BlockItem: NSCollectionViewItem {
         bottom.priority = .defaultHigh
         activeConstraints = [
             blockView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            blockView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            blockView.trailingAnchor.constraint(lessThanOrEqualTo: view.trailingAnchor),
             blockView.topAnchor.constraint(equalTo: view.topAnchor),
-            bottom,
-            blockView.widthAnchor.constraint(equalTo: view.widthAnchor)
+            bottom
         ]
         NSLayoutConstraint.activate(activeConstraints)
     }
@@ -311,9 +169,7 @@ private final class SingleColumnCollectionViewFlowLayout: NSCollectionViewFlowLa
 
     override func prepare() {
         super.prepare()
-        guard let collectionView else {
-            return
-        }
+        guard let collectionView else { return }
         let visibleWidth = collectionView.enclosingScrollView?.contentView.bounds.width ?? collectionView.bounds.width
         let width = max(1, visibleWidth - sectionInset.left - sectionInset.right)
         estimatedItemSize = .zero

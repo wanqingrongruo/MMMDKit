@@ -8,8 +8,9 @@ class MacChatFeedViewController: NSViewController, NSCollectionViewDataSource, N
     private let transcriptCollectionView = NSCollectionView()
     private let transcriptLayout = NSCollectionViewFlowLayout()
     var configuration: MarkdownConfiguration!
-    var messages: [DemoChatMessage] = []
+    var messages: [MacMessageLayoutModel] = []
     private var previewWindows: [NSWindow] = []
+    private var lastLayoutWidth: CGFloat = 0
 
     var headerView: NSView? { nil }
 
@@ -114,13 +115,30 @@ class MacChatFeedViewController: NSViewController, NSCollectionViewDataSource, N
         }
     }
 
+    func isNearBottom(threshold: CGFloat = 72) -> Bool {
+        let visibleRect = transcriptScrollView.contentView.bounds
+        let contentHeight = transcriptCollectionView.bounds.height
+        return contentHeight - visibleRect.maxY <= threshold
+    }
+
+    func buildLayoutModel(for message: DemoChatMessage) -> MacMessageLayoutModel {
+        MacMessageLayoutModel(
+            message: message,
+            layout: MacChatBubbleLayoutEngine.build(
+                message: message,
+                configuration: configuration,
+                containerWidth: currentTranscriptWidth
+            )
+        )
+    }
+
     func collectionView(_ collectionView: NSCollectionView, numberOfItemsInSection section: Int) -> Int {
         messages.count
     }
 
     func collectionView(_ collectionView: NSCollectionView, itemForRepresentedObjectAt indexPath: IndexPath) -> NSCollectionViewItem {
         let item = collectionView.makeItem(withIdentifier: ChatMessageItem.identifier, for: indexPath) as? ChatMessageItem ?? ChatMessageItem()
-        item.configure(message: messages[indexPath.item], configuration: configuration)
+        item.configure(model: messages[indexPath.item], configuration: configuration)
         return item
     }
 
@@ -130,13 +148,31 @@ class MacChatFeedViewController: NSViewController, NSCollectionViewDataSource, N
         sizeForItemAt indexPath: IndexPath
     ) -> NSSize {
         let width = max(1, collectionView.enclosingScrollView?.contentView.bounds.width ?? collectionView.bounds.width)
-        let height = ChatMessageRowView.estimatedHeight(for: messages[indexPath.item], width: width, configuration: configuration)
+        guard indexPath.item < messages.count else { return NSSize(width: width, height: 1) }
+        let height = messages[indexPath.item].layout.exactHeight
         return NSSize(width: width, height: height)
     }
 
     override func viewDidLayout() {
         super.viewDidLayout()
+        relayoutMessagesIfNeeded()
+    }
+
+    private var currentTranscriptWidth: CGFloat {
+        max(1, transcriptCollectionView.enclosingScrollView?.contentView.bounds.width ?? transcriptCollectionView.bounds.width)
+    }
+
+    private func relayoutMessagesIfNeeded() {
+        let width = currentTranscriptWidth
+        guard abs(width - lastLayoutWidth) > 1 else { return }
+        lastLayoutWidth = width
+        guard !messages.isEmpty, configuration != nil else {
+            transcriptLayout.invalidateLayout()
+            return
+        }
+        messages = messages.map { buildLayoutModel(for: $0.message) }
         transcriptLayout.invalidateLayout()
+        transcriptCollectionView.reloadData()
     }
 
     private func setupTranscriptCollectionView() {

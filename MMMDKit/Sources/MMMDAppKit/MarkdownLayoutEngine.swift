@@ -22,7 +22,7 @@ public struct MarkdownLayoutResult {
 /// Markdown 文档的 AppKit 尺寸测量入口。
 ///
 /// 该类型适合在 macOS 列表或自定义容器中提前测量 Markdown 内容高度。测量会复用
-/// `MarkdownNSView.estimatedHeight` 的内部 sizing view，因此应在主线程调用。
+/// `MarkdownNSView` 与 `MarkdownCollectionViewHost` 共用的 AppKit 渲染计划。
 public enum MarkdownLayoutEngine {
     /// 测量一份 Markdown 文档在指定宽度下的内容尺寸。
     /// - Parameters:
@@ -36,12 +36,15 @@ public enum MarkdownLayoutEngine {
         configuration: MarkdownConfiguration
     ) -> MarkdownLayoutResult {
         let contentWidth = max(1, width)
-        let height = MarkdownNSView.estimatedHeight(
-            for: document,
-            width: contentWidth,
-            configuration: configuration
+        let transformedDocument = (try? configuration.transformedDocument(document)) ?? document
+        let context = AppKitMarkdownContextBuilder.makeContext(configuration: configuration)
+        let items = MarkdownRenderPlanBuilder.makeItems(from: transformedDocument)
+        let layout = AppKitMarkdownBlockMeasurer.layout(
+            items: items,
+            fittingWidth: contentWidth,
+            context: context
         )
-        return MarkdownLayoutResult(size: CGSize(width: contentWidth, height: height))
+        return MarkdownLayoutResult(size: layout.size)
     }
 }
 #endif

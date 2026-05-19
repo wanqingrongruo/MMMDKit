@@ -16,8 +16,8 @@ Demo 现在推荐使用 SPM 本地包接入：
 2. 选择 `File > Add Package Dependencies...`。
 3. 添加本地 package 路径：同级目录 `../MMMDKit`。
 4. 将对应 demo 源码文件加入 App target：
-   - iOS: `iOSDemo/MMMDKitiOSDemoApp.swift`
-   - macOS: `macOSDemo/MMMDKitMacDemoApp.swift`
+   - iOS: `iOSDemo/*.swift`
+   - macOS: `macOSDemo/*.swift`
    - 共享数据: `Shared/DemoMarkdownSamples.swift`
 
 ## iOSDemo
@@ -43,6 +43,8 @@ Demo 现在推荐使用 SPM 本地包接入：
 - `MMMDHTML`
 - `MMMDAppKit`
 - `SwiftMath`（通过 MMMDKit 的 SPM 依赖传递引入，用于原生公式渲染）
+
+macOS demo 的消息列表使用预计算布局模型：先通过 `MarkdownLayoutEngine.measure(...)` 得到 Markdown 内容尺寸，再组合标题和气泡内边距，最后由 `NSCollectionView` 直接读取模型高度。这样可以避免窗口 resize 或流式刷新时在 delegate 中反复测量。
 
 ## CocoaPods 注意事项
 

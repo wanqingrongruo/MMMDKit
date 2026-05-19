@@ -14,6 +14,7 @@ MMMDKit 是面向 Apple 平台的模块化原生 Markdown 渲染框架，重点�
 - 原生 UIKit/AppKit 渲染：常见 Markdown 块会映射到系统视图，而不是 WebView 整页渲染。
 - 流式输出：内置 `StreamingMarkdownSession`，业务只需要不断追加上游返回的新文本。
 - 布局测量：提供 `MarkdownLayoutEngine`，列表和聊天气泡可以提前计算 Markdown 内容尺寸。
+- AppKit 统一布局：macOS 渲染层使用统一 render plan 和测量器，`MarkdownNSView`、`MarkdownCollectionViewHost`、`MarkdownLayoutEngine` 共享同一套布局结果。
 - 可替换能力：Parser、代码高亮、公式渲染、图片加载、HTML 策略都通过协议注入。
 - 模块化接入：可以只引入模型和解析，也可以按平台引入 UIKit/AppKit 渲染层。
 - AI 场景优化：流式尾部代码块不会反复异步高亮，稳定块会复用高亮缓存。
@@ -27,7 +28,7 @@ MMMDKit 是面向 Apple 平台的模块化原生 Markdown 渲染框架，重点�
 - `MMMDMath`：LaTeX 渲染协议和纯文本 fallback 实现。
 - `MMMDHTML`：HTML 清洗与渲染能力判断。
 - `MMMDUIKit`：iOS/iPadOS 原生渲染入口 `MarkdownView`。
-- `MMMDAppKit`：macOS 原生渲染入口 `MarkdownNSView`。
+- `MMMDAppKit`：macOS 原生渲染入口 `MarkdownNSView`、长文滚动容器 `MarkdownCollectionViewHost` 和 AppKit 尺寸测量。
 - `MMMDKit`：非 UI 核心模块的 umbrella product。
 
 ## Swift Package Manager
@@ -134,9 +135,11 @@ let layout = MarkdownLayoutEngine.measure(
 print(layout.size.height)
 ```
 
+`MarkdownLayoutEngine` 只返回 Markdown 内容本身的尺寸。聊天气泡、头像、标题、内边距和发送状态等业务 UI，需要在外层自行叠加。
+
 ### macOS 渲染
 
-macOS 使用 `MarkdownNSView`，其余配置方式与 UIKit 基本一致：
+macOS 使用 `MarkdownNSView`，其余配置方式与 UIKit 基本一致。`MarkdownNSView` 本身不是滚动容器，适合嵌入 `NSScrollView`、聊天气泡、collection item 或 SwiftUI `NSViewRepresentable`：
 
 ```swift
 import MMMDCore
@@ -148,6 +151,15 @@ let markdownView = MarkdownNSView()
 markdownView.configuration = MarkdownConfiguration(codeHighlighter: KeywordCodeHighlighter())
 markdownView.render(try CmarkMarkdownParser().parse(markdown))
 ```
+
+如果渲染整篇长文档并希望由库内部提供滚动容器，可以使用 `MarkdownCollectionViewHost`：
+
+```swift
+let host = MarkdownCollectionViewHost()
+host.render(document, configuration: configuration)
+```
+
+macOS 列表或聊天场景建议先调用 `MarkdownLayoutEngine.measure(...)` 生成布局模型，再把结果交给 `NSCollectionViewDelegateFlowLayout`，避免在 `sizeForItemAt` 中重复解析或临时测量。
 
 ## 详细教程
 

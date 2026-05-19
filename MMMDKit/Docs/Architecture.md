@@ -89,8 +89,11 @@ Token Delta
 负责 macOS 原生渲染：
 
 - `MarkdownNSView`
-- NSCollectionView host
+- `MarkdownCollectionViewHost`
+- AppKit render plan、block measurer 和 block view factory
 - AppKit 菜单、hover、无障碍、复制
+
+AppKit 层的布局入口是统一的 render plan。`MarkdownNSView` 负责非滚动内容渲染，适合嵌入聊天气泡、列表 item 或 SwiftUI；`MarkdownCollectionViewHost` 是长文档滚动容器。两者都复用同一套 block 测量结果，`MarkdownLayoutEngine.measure(...)` 也直接走这条链路，避免列表预排版高度和真实渲染高度分叉。
 
 ## 自定义点
 
@@ -144,3 +147,23 @@ HTML 分层支持：
 - layout cache 需要包含宽度、动态字体、主题和平台 trait。
 - 代码高亮异步执行。
 - token streaming 阶段避免整篇文档 reload。
+
+## AppKit 布局策略
+
+macOS 不能直接照搬 UIKit 的 `systemLayoutSizeFitting` 思路。当前 AppKit 实现采用：
+
+```text
+MarkdownDocument
+  -> MarkdownRenderPlanBuilder
+  -> [MarkdownRenderItem]
+  -> AppKitMarkdownBlockMeasurer
+  -> AppKitMarkdownBlockViewFactory
+  -> MarkdownNSView / MarkdownCollectionViewHost
+```
+
+关键约束：
+
+- `MarkdownNSView` 是非滚动内容视图，使用 frame-driven 布局，并采用 flipped 坐标系从上到下摆放 block。
+- `MarkdownCollectionViewHost` 只负责长文档滚动，不能和外层聊天列表形成多层滚动。
+- `MarkdownLayoutEngine` 返回 Markdown 内容尺寸，不包含业务气泡、标题、头像等外层 UI。
+- 普通文本与代码块使用完整 TextKit 链路，确保 `NSTextView` 的 storage、layout manager 和 text container 自洽。

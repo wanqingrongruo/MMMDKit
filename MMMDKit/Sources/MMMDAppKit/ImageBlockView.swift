@@ -15,6 +15,7 @@ final class ImageBlockView: NSImageView {
         setAccessibilityElement(true)
         setAccessibilityLabel(imageBlock.alt)
         addGestureRecognizer(NSClickGestureRecognizer(target: self, action: #selector(imageClicked)))
+        heightAnchor.constraint(greaterThanOrEqualToConstant: 180).isActive = true
         load(imageBlock, context: context)
     }
 

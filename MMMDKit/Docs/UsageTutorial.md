@@ -17,7 +17,7 @@ MMMDKit 是一个面向 Apple 平台的模块化原生 Markdown 渲染框架。�
 - `MMMDMath`：公式渲染协议和纯文本 fallback。
 - `MMMDHTML`：HTML 清洗和渲染能力判断。
 - `MMMDUIKit`：iOS/iPadOS 的 `MarkdownView`。
-- `MMMDAppKit`：macOS 的 `MarkdownNSView`。
+- `MMMDAppKit`：macOS 的 `MarkdownNSView`、`MarkdownCollectionViewHost` 和 AppKit 尺寸测量。
 
 ### 1.2 推荐组合
 
@@ -268,6 +268,7 @@ import MMMDHighlighter
 import MMMDAppKit
 
 final class MarkdownViewController: NSViewController {
+    private let scrollView = NSScrollView()
     private let markdownView = MarkdownNSView()
 
     override func loadView() {
@@ -277,13 +278,23 @@ final class MarkdownViewController: NSViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
 
+        scrollView.hasVerticalScroller = true
+        scrollView.drawsBackground = false
+        scrollView.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(scrollView)
+
         markdownView.translatesAutoresizingMaskIntoConstraints = false
-        view.addSubview(markdownView)
+        scrollView.documentView = markdownView
         NSLayoutConstraint.activate([
-            markdownView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 20),
-            markdownView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20),
-            markdownView.topAnchor.constraint(equalTo: view.topAnchor, constant: 20),
-            markdownView.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -20)
+            scrollView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 20),
+            scrollView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20),
+            scrollView.topAnchor.constraint(equalTo: view.topAnchor, constant: 20),
+            scrollView.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -20),
+
+            markdownView.leadingAnchor.constraint(equalTo: scrollView.contentView.leadingAnchor),
+            markdownView.trailingAnchor.constraint(equalTo: scrollView.contentView.trailingAnchor),
+            markdownView.topAnchor.constraint(equalTo: scrollView.contentView.topAnchor),
+            markdownView.widthAnchor.constraint(equalTo: scrollView.contentView.widthAnchor)
         ])
 
         markdownView.configuration = MarkdownConfiguration(codeHighlighter: KeywordCodeHighlighter())
@@ -291,6 +302,50 @@ final class MarkdownViewController: NSViewController {
     }
 }
 ```
+
+### 5.1 视图职责
+
+`MarkdownNSView` 是非滚动内容视图，不会自己创建 `NSScrollView`。它适合放在：
+
+- 聊天气泡或 `NSCollectionViewItem` 内部。
+- 已有 `NSScrollView` 的 document view 中。
+- SwiftUI 的 `NSViewRepresentable` 中。
+
+macOS 渲染层内部会先把 `MarkdownDocument` 转换为稳定的 render plan，再用同一套测量器生成布局。`MarkdownNSView`、`MarkdownLayoutEngine.measure(...)` 和 `MarkdownCollectionViewHost` 共享这条链路，因此列表预排版和实际渲染的高度会保持一致。
+
+### 5.2 长文档滚动容器
+
+如果你希望库直接提供滚动容器，可以使用 `MarkdownCollectionViewHost`：
+
+```swift
+let host = MarkdownCollectionViewHost()
+host.translatesAutoresizingMaskIntoConstraints = false
+view.addSubview(host)
+
+host.render(document, configuration: configuration)
+```
+
+`MarkdownCollectionViewHost` 内部使用 `NSScrollView + NSCollectionView` 承载 block item，适合长文档阅读。聊天列表不建议再在每个消息 cell 里嵌套它；聊天气泡应优先使用 `MarkdownNSView`，由外层列表负责滚动。
+
+### 5.3 macOS 聊天列表建议
+
+在 `NSCollectionView` 或 `NSTableView` 中展示聊天消息时，建议先建立自己的消息布局模型：
+
+```swift
+struct MessageLayoutModel {
+    let message: ChatMessage
+    let markdownLayout: MarkdownLayoutResult
+    let bubbleSize: CGSize
+}
+
+let markdownLayout = MarkdownLayoutEngine.measure(
+    document: message.document,
+    fittingWidth: bubbleContentWidth,
+    configuration: configuration
+)
+```
+
+之后 `collectionView(_:layout:sizeForItemAt:)` 只读取预计算高度，不要在 delegate 回调里重新 parse 或重新测量。窗口宽度变化时，再按新的可用宽度批量重建布局模型。
 
 ---
 
@@ -334,12 +389,15 @@ let bubbleSize = CGSize(
 )
 ```
 
+macOS 中可使用 `NSEdgeInsets` 表达同样的气泡内边距，并把测量结果保存到 `NSCollectionView`/`NSTableView` 的行模型中。
+
 ### 6.2 使用建议
 
 - UIKit 版本的测量引擎适合列表预排版，内部复用文本排版和块级元素高度计算。
-- AppKit 版本复用 `MarkdownNSView.estimatedHeight`，建议在主线程调用。
+- AppKit 版本复用统一 render plan 和 block measurer，`MarkdownNSView`、`MarkdownCollectionViewHost` 与 `MarkdownLayoutEngine` 会得到同一套高度结果。
 - 测量结果只负责 Markdown 内容，业务容器尺寸仍应由业务侧组合。
 - 如果内容在流式变化，建议配合 `MarkdownRenderDiff.stableBlockCount` 缓存稳定块，减少重复测量。
+- macOS 列表中应把测量结果保存到消息 layout model，窗口宽度变化时再重建，不要在 `sizeForItemAt` 高频回调中反复测量。
 
 ---
 

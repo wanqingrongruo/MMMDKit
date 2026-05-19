@@ -9,13 +9,22 @@ final class TextBlockView: NSTextView {
     private static let attrStringCache = NSCache<NSString, NSAttributedString>()
 
     init(blocks: [MarkdownBlock], context: RenderContext, cacheKey: String? = nil, textColor: NSColor? = nil) {
-        super.init(frame: .zero, textContainer: NSTextContainer())
+        let textStorage = NSTextStorage()
+        let layoutManager = NSLayoutManager()
+        let textContainer = NSTextContainer()
+        layoutManager.addTextContainer(textContainer)
+        textStorage.addLayoutManager(layoutManager)
+        super.init(frame: .zero, textContainer: textContainer)
         backgroundColor = .clear
         isEditable = false
         isSelectable = true
         drawsBackground = false
+        isHorizontallyResizable = false
+        isVerticallyResizable = false
         textContainerInset = .zero
-        textContainer?.lineFragmentPadding = 0
+        textContainer.lineFragmentPadding = 0
+        textContainer.widthTracksTextView = true
+        textContainer.heightTracksTextView = false
         onLinkTap = context.actions.onLinkTap
         
         let resolvedTextColor = textColor ?? .labelColor
@@ -31,9 +40,10 @@ final class TextBlockView: NSTextView {
             }
         }
         
-        textStorage?.setAttributedString(result)
+        textStorage.setAttributedString(result)
         setAccessibilityElement(true)
         setAccessibilityLabel(result.string)
+        invalidateIntrinsicContentSize()
     }
 
     required init?(coder: NSCoder) {
@@ -46,6 +56,22 @@ final class TextBlockView: NSTextView {
         } else if let urlString = link as? String, let url = URL(string: urlString) {
             onLinkTap?(url)
         }
+    }
+
+    override var intrinsicContentSize: NSSize {
+        let measuredHeight = Self.measuredHeight(for: attributedString(), width: measurementWidth)
+        return NSSize(width: NSView.noIntrinsicMetric, height: measuredHeight)
+    }
+
+    override func setFrameSize(_ newSize: NSSize) {
+        super.setFrameSize(newSize)
+        updateTextContainerSize()
+    }
+
+    override func layout() {
+        super.layout()
+        updateTextContainerSize()
+        invalidateIntrinsicContentSize()
     }
     
     private static func attributedString(for blocks: [MarkdownBlock], context: RenderContext, textColor: NSColor, listLevel: Int, blockquoteLevel: Int) -> NSAttributedString {
@@ -174,6 +200,39 @@ final class TextBlockView: NSTextView {
         default:
             return NSFont.systemFont(ofSize: 18, weight: .semibold)
         }
+    }
+
+    private var measurementWidth: CGFloat {
+        max(1, bounds.width - textContainerInset.width * 2)
+    }
+
+    private func updateTextContainerSize() {
+        guard let textContainer else { return }
+        textContainer.containerSize = NSSize(width: measurementWidth, height: CGFloat.greatestFiniteMagnitude)
+        textContainer.widthTracksTextView = false
+        textContainer.heightTracksTextView = false
+        layoutManager?.ensureLayout(for: textContainer)
+        needsDisplay = true
+    }
+
+    static func estimatedHeight(for blocks: [MarkdownBlock], width: CGFloat, context: RenderContext, textColor: NSColor? = nil) -> CGFloat {
+        let resolvedTextColor = textColor ?? .labelColor
+        let attributed = attributedString(for: blocks, context: context, textColor: resolvedTextColor, listLevel: 0, blockquoteLevel: 0)
+        return measuredHeight(for: attributed, width: width)
+    }
+
+    private static func measuredHeight(for attributed: NSAttributedString, width: CGFloat) -> CGFloat {
+        guard attributed.length > 0 else { return 0 }
+        let textStorage = NSTextStorage(attributedString: attributed)
+        let textContainer = NSTextContainer(containerSize: NSSize(width: max(1, width), height: CGFloat.greatestFiniteMagnitude))
+        textContainer.lineFragmentPadding = 0
+        textContainer.widthTracksTextView = false
+        textContainer.heightTracksTextView = false
+        let layoutManager = NSLayoutManager()
+        layoutManager.addTextContainer(textContainer)
+        textStorage.addLayoutManager(layoutManager)
+        layoutManager.ensureLayout(for: textContainer)
+        return ceil(layoutManager.usedRect(for: textContainer).height)
     }
 }
 #endif

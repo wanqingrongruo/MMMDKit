@@ -28,8 +28,12 @@ final class CodeBlockView: NSView {
         textView.isEditable = false
         textView.isSelectable = true
         textView.drawsBackground = false
+        textView.isHorizontallyResizable = false
+        textView.isVerticallyResizable = false
         textView.textContainerInset = NSSize(width: context.theme.spacing.codePadding, height: 0)
         textView.textContainer?.lineFragmentPadding = 0
+        textView.textContainer?.widthTracksTextView = true
+        textView.textContainer?.heightTracksTextView = false
         textView.font = .monospacedSystemFont(ofSize: NSFont.preferredFont(forTextStyle: .body).pointSize - 1, weight: .regular)
         textView.textColor = .labelColor
         textView.string = codeBlock.content
@@ -47,6 +51,31 @@ final class CodeBlockView: NSView {
             stack.topAnchor.constraint(equalTo: topAnchor),
             stack.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -context.theme.spacing.codePadding)
         ])
+    }
+
+    static func height(for codeBlock: CodeBlock, context: RenderContext) -> CGFloat {
+        height(for: codeBlock, width: CGFloat(context.codeBlockMaximumWidth ?? 760), context: context)
+    }
+
+    static func height(for codeBlock: CodeBlock, width: CGFloat, context: RenderContext) -> CGFloat {
+        let baseFont = NSFont.monospacedSystemFont(
+            ofSize: max(10, NSFont.preferredFont(forTextStyle: .body).pointSize - 1),
+            weight: .regular
+        )
+        let attributed = NSAttributedString(string: codeBlock.content.isEmpty ? " " : codeBlock.content, attributes: [.font: baseFont])
+        let textStorage = NSTextStorage(attributedString: attributed)
+        let textContainer = NSTextContainer(size: NSSize(
+            width: max(1, width - context.theme.spacing.codePadding * 2),
+            height: CGFloat.greatestFiniteMagnitude
+        ))
+        textContainer.lineFragmentPadding = 0
+        textContainer.widthTracksTextView = false
+        textContainer.heightTracksTextView = false
+        let layoutManager = NSLayoutManager()
+        layoutManager.addTextContainer(textContainer)
+        textStorage.addLayoutManager(layoutManager)
+        layoutManager.ensureLayout(for: textContainer)
+        return ceil(layoutManager.usedRect(for: textContainer).height) + 36 + 8 + context.theme.spacing.codePadding
     }
 
     private func applyHighlight(to textView: NSTextView, codeBlock: CodeBlock, context: RenderContext) {
