@@ -1,10 +1,10 @@
 Pod::Spec.new do |s|
   s.name = "MMMDKit"
-  s.version = "0.1.0"
-  s.summary = "面向 Apple 平台的模块化原生 Markdown 渲染框架。"
+  s.version = "0.2.0-alpha"
+  s.summary = "面向 Apple 平台的 SwiftUI-only 模块化 Markdown 渲染框架。"
   s.description = <<-DESC
-    MMMDKit 是面向 iOS、iPadOS 和 macOS 的模块化原生 Markdown 渲染框架。
-    它为 AI 流式输出、原生滚动性能、复制、选择、无障碍、动态字体、
+    MMMDKit 是面向 iOS、iPadOS 和 macOS 的 SwiftUI-only 模块化 Markdown 渲染框架。
+    它为 AI 流式输出、列表渲染、复制、图片预览、无障碍、动态字体、
     代码高亮、表格、LaTeX 和 HTML fallback 场景设计。
   DESC
   s.homepage = "https://github.com/wanqingrongruo/MMMDKit"
@@ -20,5 +20,6 @@ Pod::Spec.new do |s|
   s.dependency "MMMDHighlighter"
   s.dependency "MMMDMath"
   s.dependency "MMMDHTML"
+  s.dependency "MMMDSwiftUI"
   s.source_files = "Sources/MMMDKit/**/*.swift"
 end

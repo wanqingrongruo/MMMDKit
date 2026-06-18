@@ -4,7 +4,7 @@ MMMDKit 的核心目标是让每个主要子系统都可以被替换，也可以
 
 ## 替换 Parser
 
-Parser 不挂在 `MarkdownConfiguration` 上，而是在进入渲染前把 Markdown source 转成 `MarkdownDocument`。这让服务端 AST、自研 parser 和 `CmarkMarkdownParser` 都可以走同一条渲染管线。
+Parser 不挂在 `MarkdownConfiguration` 上，而是在进入渲染前把 Markdown source 转成 `MarkdownDocument`。这让服务端 AST、自研 parser、`SwiftMarkdownParser` 和 `CmarkMarkdownParser` 都可以走同一条 SwiftUI 渲染管线。
 
 ```swift
 struct PlainTextParser: MarkdownParser {
@@ -15,7 +15,7 @@ struct PlainTextParser: MarkdownParser {
 
 let parser: MarkdownParser = PlainTextParser()
 let document = try parser.parse("Hello", options: .init())
-markdownView.render(document, configuration: configuration)
+MarkdownDocumentView(document, configuration: configuration)
 ```
 
 当你不想使用 cmark-gfm，或者服务端已经返回结构化 Markdown AST 时，可以替换 parser。
@@ -70,7 +70,7 @@ registry.register(kind: .custom, rendererName: "ProductCardBlockRenderer")
 configuration.blockRendererRegistry = registry
 ```
 
-registry 只保存稳定的 renderer 名称和 block 类型映射。UIKit/AppKit 层可以据此把 `.custom` block 分发给业务 renderer。
+registry 只保存稳定的 renderer 名称和 block 类型映射。SwiftUI 层可以据此把 `.custom` block 分发给业务 renderer。
 
 ## 替换 Inline 渲染
 

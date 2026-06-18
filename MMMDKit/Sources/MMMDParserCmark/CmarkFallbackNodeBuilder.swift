@@ -116,6 +116,8 @@ enum CmarkFallbackNodeBuilder {
                 flushParagraph()
                 let startLine = lineNumber
                 let headerLine = line
+                let separatorLine = lines[index]
+                let alignments = Self.tableAlignments(from: separatorLine)
                 index += 1
                 var rowLines: [String] = []
                 var endLine = index
@@ -133,7 +135,7 @@ enum CmarkFallbackNodeBuilder {
                 })
 
                 children.append(.init(
-                    type: .table,
+                    type: .table(alignments: alignments),
                     children: tableRows,
                     sourceRange: .init(startLine: startLine, startColumn: 1, endLine: endLine, endColumn: lines[endLine - 1].count + 1)
                 ))
@@ -142,50 +144,10 @@ enum CmarkFallbackNodeBuilder {
 
             if let marker = ListMarker(line: line) {
                 flushParagraph()
-                let startLine = lineNumber
-                var endLine = lineNumber
-                var itemNodes: [CmarkNode] = []
-                var currentLine = line
-
-                while true {
-                    guard let currentMarker = ListMarker(line: currentLine), currentMarker.style.matches(marker.style) else {
-                        break
-                    }
-
-                    itemNodes.append(.init(
-                        type: .listItem,
-                        children: [
-                            .init(
-                                type: .paragraph,
-                                children: CmarkInlineFallbackParser.parse(currentMarker.content),
-                                sourceRange: .init(
-                                    startLine: endLine,
-                                    startColumn: currentMarker.contentStartColumn,
-                                    endLine: endLine,
-                                    endColumn: currentLine.count + 1
-                                )
-                            )
-                        ],
-                        sourceRange: .init(startLine: endLine, startColumn: 1, endLine: endLine, endColumn: currentLine.count + 1)
-                    ))
-
-                    guard index < lines.count else {
-                        break
-                    }
-                    let nextLine = lines[index]
-                    guard ListMarker(line: nextLine)?.style.matches(marker.style) == true else {
-                        break
-                    }
-                    currentLine = nextLine
-                    endLine = index + 1
-                    index += 1
+                if let parsed = Self.listNode(lines: lines, startIndex: lineNumber - 1, style: marker.style) {
+                    children.append(parsed.node)
+                    index = parsed.endIndex
                 }
-
-                children.append(.init(
-                    type: .list(style: marker.style),
-                    children: itemNodes,
-                    sourceRange: .init(startLine: startLine, startColumn: 1, endLine: endLine, endColumn: lines[endLine - 1].count + 1)
-                ))
                 continue
             }
 
@@ -206,6 +168,154 @@ enum CmarkFallbackNodeBuilder {
 
         flushParagraph()
         return CmarkNode(type: .document, children: children)
+    }
+
+    private static func listNode(
+        lines: [String],
+        startIndex: Int,
+        style: CmarkListStyle? = nil
+    ) -> (node: CmarkNode, endIndex: Int)? {
+        guard startIndex < lines.count,
+              let firstMarker = ListMarker(line: lines[startIndex]) else {
+            return nil
+        }
+
+        let listStyle = style ?? firstMarker.style
+        let baseIndentation = firstMarker.indentation
+        var index = startIndex
+        var itemNodes: [CmarkNode] = []
+
+        while index < lines.count {
+            guard let marker = ListMarker(line: lines[index]),
+                  marker.indentation == baseIndentation,
+                  marker.style.matches(listStyle) else {
+                break
+            }
+
+            let itemStartIndex = index
+            let lineNumber = index + 1
+            var itemChildren: [CmarkNode] = [
+                paragraphNode(
+                    text: marker.content,
+                    startLine: lineNumber,
+                    startColumn: marker.contentStartColumn,
+                    endLine: lineNumber,
+                    endColumn: lines[index].count + 1
+                )
+            ]
+            var continuationLines: [(text: String, lineNumber: Int)] = []
+            index += 1
+
+            func flushContinuation() {
+                let text = continuationLines
+                    .map(\.text)
+                    .joined(separator: "\n")
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !text.isEmpty,
+                      let first = continuationLines.first,
+                      let last = continuationLines.last else {
+                    continuationLines.removeAll()
+                    return
+                }
+
+                itemChildren.append(paragraphNode(
+                    text: text,
+                    startLine: first.lineNumber,
+                    startColumn: 1,
+                    endLine: last.lineNumber,
+                    endColumn: lines[last.lineNumber - 1].count + 1
+                ))
+                continuationLines.removeAll()
+            }
+
+            while index < lines.count {
+                let nextLine = lines[index]
+                let trimmed = nextLine.trimmingCharacters(in: .whitespaces)
+                if trimmed.isEmpty {
+                    break
+                }
+
+                if let nextMarker = ListMarker(line: nextLine) {
+                    if nextMarker.indentation == baseIndentation,
+                       nextMarker.style.matches(listStyle) {
+                        break
+                    }
+
+                    if nextMarker.indentation <= baseIndentation {
+                        break
+                    }
+
+                    flushContinuation()
+                    if let nested = listNode(lines: lines, startIndex: index, style: nextMarker.style) {
+                        itemChildren.append(nested.node)
+                        index = nested.endIndex
+                        continue
+                    }
+                }
+
+                let indentation = leadingIndentation(in: nextLine)
+                guard indentation > baseIndentation else {
+                    break
+                }
+
+                continuationLines.append((
+                    text: removingIndentation(from: nextLine, count: min(indentation, baseIndentation + 2)),
+                    lineNumber: index + 1
+                ))
+                index += 1
+            }
+
+            flushContinuation()
+            let itemEndIndex = max(index - 1, itemStartIndex)
+            itemNodes.append(.init(
+                type: .listItem,
+                children: itemChildren,
+                sourceRange: .init(
+                    startLine: itemStartIndex + 1,
+                    startColumn: baseIndentation + 1,
+                    endLine: itemEndIndex + 1,
+                    endColumn: lines[itemEndIndex].count + 1
+                )
+            ))
+        }
+
+        guard !itemNodes.isEmpty else {
+            return nil
+        }
+
+        let listEndIndex = max(index - 1, startIndex)
+        return (
+            .init(
+                type: .list(style: listStyle),
+                children: itemNodes,
+                sourceRange: .init(
+                    startLine: startIndex + 1,
+                    startColumn: baseIndentation + 1,
+                    endLine: listEndIndex + 1,
+                    endColumn: lines[listEndIndex].count + 1
+                )
+            ),
+            index
+        )
+    }
+
+    private static func paragraphNode(
+        text: String,
+        startLine: Int,
+        startColumn: Int,
+        endLine: Int,
+        endColumn: Int
+    ) -> CmarkNode {
+        .init(
+            type: .paragraph,
+            children: CmarkInlineFallbackParser.parse(text),
+            sourceRange: .init(
+                startLine: startLine,
+                startColumn: startColumn,
+                endLine: endLine,
+                endColumn: endColumn
+            )
+        )
     }
 
     private static func unquoted(_ line: String) -> String {
@@ -246,6 +356,25 @@ enum CmarkFallbackNodeBuilder {
         )
     }
 
+    private static func tableAlignments(from separatorLine: String) -> [MarkdownTableColumnAlignment?] {
+        splitTableRow(separatorLine).map { cell in
+            let trimmed = cell.trimmingCharacters(in: .whitespaces)
+            let isLeading = trimmed.hasPrefix(":")
+            let isTrailing = trimmed.hasSuffix(":")
+
+            switch (isLeading, isTrailing) {
+            case (true, true):
+                return .center
+            case (true, false):
+                return .leading
+            case (false, true):
+                return .trailing
+            case (false, false):
+                return nil
+            }
+        }
+    }
+
     private static func splitTableRow(_ line: String) -> [String] {
         var value = line.trimmingCharacters(in: .whitespaces)
         if value.hasPrefix("|") {
@@ -262,30 +391,67 @@ private struct ListMarker {
     var style: CmarkListStyle
     var content: String
     var contentStartColumn: Int
+    var indentation: Int
 
     init?(line: String) {
-        if line.hasPrefix("- ") || line.hasPrefix("* ") || line.hasPrefix("+ ") {
+        let leadingCharacters = line.prefix { $0 == " " || $0 == "\t" }
+        indentation = leadingIndentation(in: line)
+        let markerText = line.dropFirst(leadingCharacters.count)
+
+        if markerText.hasPrefix("- ") || markerText.hasPrefix("* ") || markerText.hasPrefix("+ ") {
             style = .unordered
-            content = String(line.dropFirst(2))
-            contentStartColumn = 3
+            content = String(markerText.dropFirst(2))
+            contentStartColumn = indentation + 3
             return
         }
 
-        let digits = line.prefix { $0.isNumber }
+        let digits = markerText.prefix { $0.isNumber }
         guard !digits.isEmpty,
-              let dotIndex = line.index(line.startIndex, offsetBy: digits.count, limitedBy: line.endIndex),
-              dotIndex < line.endIndex,
-              line[dotIndex] == ".",
-              line.index(after: dotIndex) < line.endIndex,
-              line[line.index(after: dotIndex)] == " ",
+              let dotIndex = markerText.index(markerText.startIndex, offsetBy: digits.count, limitedBy: markerText.endIndex),
+              dotIndex < markerText.endIndex,
+              markerText[dotIndex] == ".",
+              markerText.index(after: dotIndex) < markerText.endIndex,
+              markerText[markerText.index(after: dotIndex)] == " ",
               let start = Int(digits) else {
             return nil
         }
 
         style = .ordered(start: start)
-        content = String(line.dropFirst(digits.count + 2))
-        contentStartColumn = digits.count + 3
+        content = String(markerText.dropFirst(digits.count + 2))
+        contentStartColumn = indentation + digits.count + 3
     }
+}
+
+private func leadingIndentation(in line: String) -> Int {
+    line.reduce(into: (count: 0, isLeading: true)) { state, character in
+        guard state.isLeading else { return }
+        if character == " " {
+            state.count += 1
+        } else if character == "\t" {
+            state.count += 4
+        } else {
+            state.isLeading = false
+        }
+    }.count
+}
+
+private func removingIndentation(from line: String, count: Int) -> String {
+    var removed = 0
+    var index = line.startIndex
+
+    while index < line.endIndex, removed < count {
+        let character = line[index]
+        if character == " " {
+            removed += 1
+        } else if character == "\t" {
+            removed += 4
+        } else {
+            break
+        }
+        index = line.index(after: index)
+    }
+
+    return String(line[index...])
 }
 
 private extension CmarkListStyle {

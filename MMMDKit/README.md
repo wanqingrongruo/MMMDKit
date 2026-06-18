@@ -1,6 +1,6 @@
 # MMMDKit
 
-MMMDKit 是面向 Apple 平台的模块化原生 Markdown 渲染框架，重点服务 AI 应用中的流式输出、原生滚动性能、复制与选择、无障碍、动态字体、代码高亮、表格、LaTeX 和 HTML fallback。
+MMMDKit v2 是面向 Apple 平台的 SwiftUI-only 模块化 Markdown 渲染框架，重点服务 AI 应用中的流式输出、列表渲染、代码高亮、表格、LaTeX、图片预览、链接点击、复制和国际化。
 
 ## 平台支持
 
@@ -9,170 +9,118 @@ MMMDKit 是面向 Apple 平台的模块化原生 Markdown 渲染框架，重点�
 - macOS 12.0+
 - Swift 5.7+
 
-## 能力概览
+## 模块
 
-- 原生 UIKit/AppKit 渲染：常见 Markdown 块会映射到系统视图，而不是 WebView 整页渲染。
-- 流式输出：内置 `StreamingMarkdownSession`，业务只需要不断追加上游返回的新文本。
-- 布局测量：提供 `MarkdownLayoutEngine`，列表和聊天气泡可以提前计算 Markdown 内容尺寸。
-- AppKit 统一布局：macOS 渲染层使用统一 render plan 和测量器，`MarkdownNSView`、`MarkdownCollectionViewHost`、`MarkdownLayoutEngine` 共享同一套布局结果。
-- 可替换能力：Parser、代码高亮、公式渲染、图片加载、HTML 策略都通过协议注入。
-- 模块化接入：可以只引入模型和解析，也可以按平台引入 UIKit/AppKit 渲染层。
-- AI 场景优化：流式尾部代码块不会反复异步高亮，稳定块会复用高亮缓存。
+- `MMMDCore`：共享文档模型、主题、配置、插件、actions、国际化、图片缓存和复制模型。
+- `MMMDParserSwiftMarkdown`：SPM 默认 parser，基于 `swift-markdown`。
+- `MMMDParserCmark`：CocoaPods 默认 fallback parser。
+- `MMMDStreaming`：独立流式 buffer、节流、稳定块和 metrics。
+- `MMMDHighlighter`：代码高亮协议、默认 Swift keyword highlighter 和缓存 wrapper。
+- `MMMDMath`：公式渲染协议和纯文本 fallback。
+- `MMMDHTML`：HTML 清洗和 fallback 能力。
+- `MMMDSwiftUI`：SwiftUI-only 渲染入口。
+- `MMMDKit`：umbrella product。
 
-## 模块说明
-
-- `MMMDCore`：共享文档模型、协议、主题、插件、复制模型和渲染配置。
-- `MMMDParserCmark`：Markdown/GFM 解析入口，将 Markdown 文本转换为 `MarkdownDocument`。
-- `MMMDStreaming`：流式 buffer、稳定块判断、节流会话和渲染 diff。
-- `MMMDHighlighter`：代码高亮协议，以及纯文本和 Swift 关键字高亮实现。
-- `MMMDMath`：LaTeX 渲染协议和纯文本 fallback 实现。
-- `MMMDHTML`：HTML 清洗与渲染能力判断。
-- `MMMDUIKit`：iOS/iPadOS 原生渲染入口 `MarkdownView`。
-- `MMMDAppKit`：macOS 原生渲染入口 `MarkdownNSView`、长文滚动容器 `MarkdownCollectionViewHost` 和 AppKit 尺寸测量。
-- `MMMDKit`：非 UI 核心模块的 umbrella product。
-
-## Swift Package Manager
+## SPM
 
 ```swift
 dependencies: [
-    .package(url: "git@github.com:wanqingrongruo/MMMDKit.git", from: "0.1.0")
+    .package(url: "git@github.com:wanqingrongruo/MMMDKit.git", from: "0.2.0")
 ]
 ```
 
-iOS/iPadOS 应用通常选择：
+推荐：
 
 ```swift
-.product(name: "MMMDParserCmark", package: "MMMDKit")
-.product(name: "MMMDUIKit", package: "MMMDKit")
+.product(name: "MMMDKit", package: "MMMDKit")
 ```
 
-macOS 应用通常选择：
-
-```swift
-.product(name: "MMMDParserCmark", package: "MMMDKit")
-.product(name: "MMMDAppKit", package: "MMMDKit")
-```
-
-只做解析、流式处理或服务端预处理时，可以按需选择：
+按模块接入：
 
 ```swift
 .product(name: "MMMDCore", package: "MMMDKit")
-.product(name: "MMMDParserCmark", package: "MMMDKit")
+.product(name: "MMMDParserSwiftMarkdown", package: "MMMDKit")
 .product(name: "MMMDStreaming", package: "MMMDKit")
+.product(name: "MMMDSwiftUI", package: "MMMDKit")
 ```
 
-SPM 是当前推荐接入方式。通过 SPM 引入 `MMMDUIKit` / `MMMDAppKit` 时，会传递引入 SwiftMath，`$$...$$` block math 默认使用原生公式排版。
-
 ## CocoaPods
-
-完整核心库：
 
 ```ruby
 pod "MMMDKit"
 ```
 
-按模块引入：
+CocoaPods 不 vendoring `swift-markdown` / `swift-cmark`。Pods 默认使用 `MMMDParserCmark` fallback parser；如果需要与 SPM 完全一致的 `swift-markdown` 行为，推荐使用 SPM。
 
-```ruby
-pod "MMMDCore"
-pod "MMMDParserCmark"
-pod "MMMDStreaming"
-pod "MMMDHighlighter"
-pod "MMMDMath"
-pod "MMMDHTML"
-pod "MMMDUIKit"   # iOS/iPadOS
-pod "MMMDAppKit"  # macOS
-```
-
-注意：CocoaPods 集成不会自动引入 `mgriebling/SwiftMath`。因此 CocoaPods 下公式块会 fallback 为 LaTeX 文本显示；如果需要真实公式排版，需要业务侧自行提供 `MarkdownConfiguration.mathRenderer`，或 vendoring 一个 CocoaPods 可用的公式渲染实现。
-
-## 快速开始
-
-### UIKit 静态渲染
+## SwiftUI 快速开始
 
 ```swift
-import MMMDCore
-import MMMDParserCmark
-import MMMDHighlighter
-import MMMDUIKit
+import SwiftUI
+import MMMDKit
 
-let parser = CmarkMarkdownParser()
-let markdownView = MarkdownView()
-markdownView.translatesAutoresizingMaskIntoConstraints = false
-view.addSubview(markdownView)
+struct ContentView: View {
+    var body: some View {
+        ScrollView {
+            MarkdownText("""
+            # Hello
 
-let configuration = MarkdownConfiguration(
-    codeHighlighter: KeywordCodeHighlighter(),
-    codeBlockMaximumWidth: 640
-)
-markdownView.configuration = configuration
-
-let document = try parser.parse("# Hello\n\n这是一段 **Markdown**。")
-markdownView.render(document)
+            这是一段 **Markdown**，支持表格、代码块、公式和图片。
+            """)
+            .padding()
+        }
+    }
+}
 ```
 
-### UIKit 流式渲染
+## 流式输出
 
 ```swift
-markdownView.startStreaming(parser: CmarkMarkdownParser())
+import MMMDKit
 
-for await delta in aiTextStream {
-    markdownView.appendStreamingText(delta)
+let source = AsyncStream<String> { continuation in
+    continuation.yield("# Hello\n\n")
+    continuation.yield("Streaming **Markdown**")
+    continuation.finish()
 }
 
-markdownView.finishStreaming()
+StreamingMarkdownText(source: source, inputMode: .delta)
 ```
 
-### 内容尺寸测量
+`StreamingMarkdownText` 支持 `.delta` 和 `.snapshot` 两种输入模式。底层 `MarkdownRenderDiff.metrics` 会提供 chunk、render、parse latency、render latency 等指标，便于 demo 或业务监控面板展示。
+
+## 自定义
+
+`MarkdownConfiguration` 可以替换或定制：
+
+- `theme`
+- `localization`
+- `codeHighlighter`
+- `mathRenderer`
+- `imageLoader`
+- `layoutOptions`
+- `actions`
+- `plugins`
+
+例如自定义链接和复制：
 
 ```swift
-let layout = MarkdownLayoutEngine.measure(
-    document: document,
-    fittingWidth: 320,
-    configuration: configuration
+let configuration = MarkdownConfiguration(
+    actions: MarkdownActions(
+        onLinkTap: { url in print("open", url) },
+        onCopyCode: { code, language in print("copied", language ?? "plain") }
+    )
 )
 
-print(layout.size.height)
+MarkdownText(markdown, configuration: configuration)
 ```
 
-`MarkdownLayoutEngine` 只返回 Markdown 内容本身的尺寸。聊天气泡、头像、标题、内边距和发送状态等业务 UI，需要在外层自行叠加。
+## v1 迁移
 
-### macOS 渲染
+v2 不再公开 `MMMDUIKit` / `MMMDAppKit`。旧的 `MarkdownView`、`MarkdownNSView`、`MarkdownCollectionViewHost` 和 `MarkdownLayoutEngine` 不再是推荐 API。迁移说明见 [Migration v1 to v2](Docs/Migration-v1-to-v2.md)。
 
-macOS 使用 `MarkdownNSView`，其余配置方式与 UIKit 基本一致。`MarkdownNSView` 本身不是滚动容器，适合嵌入 `NSScrollView`、聊天气泡、collection item 或 SwiftUI `NSViewRepresentable`：
-
-```swift
-import MMMDCore
-import MMMDParserCmark
-import MMMDHighlighter
-import MMMDAppKit
-
-let markdownView = MarkdownNSView()
-markdownView.configuration = MarkdownConfiguration(codeHighlighter: KeywordCodeHighlighter())
-markdownView.render(try CmarkMarkdownParser().parse(markdown))
-```
-
-如果渲染整篇长文档并希望由库内部提供滚动容器，可以使用 `MarkdownCollectionViewHost`：
-
-```swift
-let host = MarkdownCollectionViewHost()
-host.render(document, configuration: configuration)
-```
-
-macOS 列表或聊天场景建议先调用 `MarkdownLayoutEngine.measure(...)` 生成布局模型，再把结果交给 `NSCollectionViewDelegateFlowLayout`，避免在 `sizeForItemAt` 中重复解析或临时测量。
-
-## 详细教程
-
-完整接入步骤、配置项、SwiftUI 包装、流式策略、自定义高亮/图片/公式等内容，请查看 [MMMDKit 使用与配置教程](Docs/UsageTutorial.md)。
-
-## 开发验证
+## 验证
 
 ```bash
+swift build
 swift test
-xcodebuild build -project ../MMMDKitDemos/iOSDemo/MMMDKitiOSDemo.xcodeproj -scheme MMMDKitiOSDemo -destination 'generic/platform=iOS Simulator'
-xcodebuild build -project ../MMMDKitDemos/macOSDemo/MMMDKitMacDemo.xcodeproj -scheme MMMDKitMacDemo -destination 'platform=macOS'
 ```
-
-## 项目状态
-
-当前仓库已经包含模块协议、UIKit/AppKit 渲染入口、iOS/macOS demo 和基础单元测试。路线图见 `Docs/Roadmap.md` 和 `Docs/TODO.md`。

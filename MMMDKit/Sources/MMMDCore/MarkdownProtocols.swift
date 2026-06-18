@@ -3,11 +3,25 @@ import Foundation
 public struct ParseOptions: Equatable, Sendable {
     public var enablesGFM: Bool
     public var preservesSourceRanges: Bool
+    public var speculativeRewrite: Bool
+    public var incompleteMarkdownPolicy: IncompleteMarkdownPolicy
 
-    public init(enablesGFM: Bool = true, preservesSourceRanges: Bool = true) {
+    public init(
+        enablesGFM: Bool = true,
+        preservesSourceRanges: Bool = true,
+        speculativeRewrite: Bool = true,
+        incompleteMarkdownPolicy: IncompleteMarkdownPolicy = .streamingFriendly
+    ) {
         self.enablesGFM = enablesGFM
         self.preservesSourceRanges = preservesSourceRanges
+        self.speculativeRewrite = speculativeRewrite
+        self.incompleteMarkdownPolicy = incompleteMarkdownPolicy
     }
+}
+
+public enum IncompleteMarkdownPolicy: String, Equatable, Sendable {
+    case disabled
+    case streamingFriendly
 }
 
 public protocol MarkdownParser {
@@ -38,6 +52,8 @@ public struct RenderContext: Sendable {
     public var mathRenderer: (any MathRenderer)?
     public var imageLoader: (any ImageLoader)?
     public var codeBlockMaximumWidth: Double?
+    public var layoutOptions: MarkdownLayoutOptions
+    public var localization: MarkdownLocalization
 
     public init(
         theme: MarkdownTheme = .default,
@@ -49,7 +65,9 @@ public struct RenderContext: Sendable {
         codeHighlighter: (any CodeHighlighter)? = nil,
         mathRenderer: (any MathRenderer)? = nil,
         imageLoader: (any ImageLoader)? = nil,
-        codeBlockMaximumWidth: Double? = 760
+        codeBlockMaximumWidth: Double? = 760,
+        layoutOptions: MarkdownLayoutOptions = .init(),
+        localization: MarkdownLocalization = .default
     ) {
         self.theme = theme
         self.environment = environment
@@ -61,6 +79,8 @@ public struct RenderContext: Sendable {
         self.mathRenderer = mathRenderer
         self.imageLoader = imageLoader
         self.codeBlockMaximumWidth = codeBlockMaximumWidth
+        self.layoutOptions = layoutOptions
+        self.localization = localization
     }
 }
 
@@ -118,6 +138,8 @@ public struct MarkdownActions: Sendable {
     public var onExpandTable: (@Sendable (_ text: String) -> Void)?
     /// 当用户点击图片块时触发，业务侧可在此实现大图预览、保存或自定义浏览器
     public var onImageTap: (@Sendable (_ image: ImageBlock) -> Void)?
+    /// 当用户从图片菜单复制 URL 时触发，业务侧可在此埋点或替换后续行为
+    public var onCopyImageURL: (@Sendable (_ image: ImageBlock) -> Void)?
 
     /// 当视图内的动态内容（如异步图片加载完毕、公式渲染完成）导致容器高度发生变化时触发
     public var onHeightChange: (@Sendable (Double) -> Void)?
@@ -131,6 +153,7 @@ public struct MarkdownActions: Sendable {
         onDownloadTable: (@Sendable (_ text: String) -> Void)? = nil,
         onExpandTable: (@Sendable (_ text: String) -> Void)? = nil,
         onImageTap: (@Sendable (_ image: ImageBlock) -> Void)? = nil,
+        onCopyImageURL: (@Sendable (_ image: ImageBlock) -> Void)? = nil,
         onHeightChange: (@Sendable (Double) -> Void)? = nil
     ) {
         self.onLinkTap = onLinkTap
@@ -141,7 +164,40 @@ public struct MarkdownActions: Sendable {
         self.onDownloadTable = onDownloadTable
         self.onExpandTable = onExpandTable
         self.onImageTap = onImageTap
+        self.onCopyImageURL = onCopyImageURL
         self.onHeightChange = onHeightChange
+    }
+}
+
+/// 控制 SwiftUI 默认渲染器的尺寸、虚拟化和预览行为。
+public struct MarkdownLayoutOptions: Equatable, Sendable {
+    /// 表格超过该行数时启用内部纵向 lazy 滚动。传入 nil 可关闭默认限制。
+    public var tableMaximumVisibleRows: Int?
+    /// 大表格启用内部纵向滚动时的最大高度。
+    public var tableMaximumHeight: Double?
+    /// 表格单元格最小宽度。
+    public var tableCellMinWidth: Double
+    /// 表格单元格最大宽度。
+    public var tableCellMaxWidth: Double
+    /// 图片默认展示的最大高度。传入 nil 可让图片按容器自然高度展示。
+    public var imageMaximumHeight: Double?
+    /// 是否启用内置图片预览 sheet。关闭后仅触发 `onImageTap`。
+    public var showsDefaultImagePreview: Bool
+
+    public init(
+        tableMaximumVisibleRows: Int? = 40,
+        tableMaximumHeight: Double? = 420,
+        tableCellMinWidth: Double = 44,
+        tableCellMaxWidth: Double = 200,
+        imageMaximumHeight: Double? = 320,
+        showsDefaultImagePreview: Bool = true
+    ) {
+        self.tableMaximumVisibleRows = tableMaximumVisibleRows
+        self.tableMaximumHeight = tableMaximumHeight
+        self.tableCellMinWidth = tableCellMinWidth
+        self.tableCellMaxWidth = tableCellMaxWidth
+        self.imageMaximumHeight = imageMaximumHeight
+        self.showsDefaultImagePreview = showsDefaultImagePreview
     }
 }
 
@@ -187,6 +243,10 @@ public struct MarkdownConfiguration: Sendable {
     public var imageLoader: (any ImageLoader)?
     /// 代码块和表格等容器的最大允许宽度。超出该宽度时，容器内部允许水平滚动
     public var codeBlockMaximumWidth: Double?
+    /// SwiftUI 默认渲染器的尺寸、虚拟化和预览行为配置
+    public var layoutOptions: MarkdownLayoutOptions
+    /// Markdown 组件内置按钮、无障碍描述和状态文本使用的本地化文案
+    public var localization: MarkdownLocalization
 
     public init(
         theme: MarkdownTheme = .default,
@@ -198,7 +258,9 @@ public struct MarkdownConfiguration: Sendable {
         codeHighlighter: (any CodeHighlighter)? = nil,
         mathRenderer: (any MathRenderer)? = nil,
         imageLoader: (any ImageLoader)? = nil,
-        codeBlockMaximumWidth: Double? = 760
+        codeBlockMaximumWidth: Double? = 760,
+        layoutOptions: MarkdownLayoutOptions = .init(),
+        localization: MarkdownLocalization = .default
     ) {
         self.theme = theme
         self.plugins = plugins
@@ -210,6 +272,8 @@ public struct MarkdownConfiguration: Sendable {
         self.mathRenderer = mathRenderer
         self.imageLoader = imageLoader
         self.codeBlockMaximumWidth = codeBlockMaximumWidth
+        self.layoutOptions = layoutOptions
+        self.localization = localization
     }
 
     public func transformedDocument(_ document: MarkdownDocument) throws -> MarkdownDocument {

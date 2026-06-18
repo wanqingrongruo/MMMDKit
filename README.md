@@ -1,65 +1,23 @@
 # MMMDKit
 
-这个仓库同时包含 MMMDKit 库源码和独立 Demo 工程。仓库根目录只负责组织项目；真正的 Swift Package 位于 `MMMDKit/`。
-
-## 目录结构
+这个仓库包含 MMMDKit 库源码和 Demo 源码。真正的 Swift Package 位于 `MMMDKit/`。
 
 ```text
 MMMDKit/
   MMMDKit/        # Swift Package / CocoaPods 库源码
-  MMMDKitDemos/   # iOS 与 macOS Demo 工程
+  MMMDKitDemos/   # SwiftUI demo 源码与共享样例
 ```
 
-## MMMDKit
-
-`MMMDKit/` 是可被外部项目通过 Swift Package Manager 引入的库目录，包含：
-
-- `Package.swift`
-- `Sources/`
-- `Tests/`
-- `Docs/`
-- `*.podspec`
-
-更多库能力、接入方式和自定义说明请查看：
+MMMDKit v2 是 SwiftUI-only 改造版本，不再公开 UIKit/AppKit 渲染模块。更多信息见：
 
 - `MMMDKit/README.md`
-- `MMMDKit/Docs/UsageTutorial.md`
-
-其中 `MMMDKit/README.md` 适合快速了解模块和最小接入方式；`MMMDKit/Docs/UsageTutorial.md` 包含更完整的 UIKit、AppKit、SwiftUI、流式输出、代码高亮、图片加载、公式渲染和插件示例。
-
-当前 AppKit 渲染层已统一 `MarkdownNSView`、`MarkdownCollectionViewHost` 和 `MarkdownLayoutEngine` 的布局测量链路。macOS 列表或聊天气泡接入时，建议先使用 `MarkdownLayoutEngine.measure(...)` 生成业务 layout model，再交给 `NSCollectionView` 消费高度。
-
-## MMMDKitDemos
-
-`MMMDKitDemos/` 是独立 Demo 区域，不属于 Swift Package 内容，因此外部项目通过 SPM 引入 `MMMDKit` 时不会在 package 中看到 Demo 工程。
-
-Demo 包含：
-
-- `MMMDKitDemos/iOSDemo/`
-- `MMMDKitDemos/macOSDemo/`
-- `MMMDKitDemos/Shared/DemoMarkdownSamples.swift`
-
-两个 Demo 都通过本地 Swift Package Manager 路径 `../../MMMDKit` 引入库。详情见：
-
-- `MMMDKitDemos/README.md`
-- `MMMDKitDemos/iOSDemo/README.md`
-- `MMMDKitDemos/macOSDemo/README.md`
-
-## 公式渲染差异
-
-SPM 是当前推荐接入方式。通过 SPM 引入 `MMMDUIKit` / `MMMDAppKit` 时，会传递引入 SwiftMath，`$$...$$` block math 默认使用原生公式排版。
-
-CocoaPods 仍可用于集成 MMMDKit 的核心模块和 UIKit/AppKit 渲染模块，但当前原生公式渲染依赖的 `mgriebling/SwiftMath` 主要通过 SPM 分发。因此 CocoaPods 集成时不会自动获得 SwiftMath，公式会 fallback 为 LaTeX 文本显示，除非业务侧自行提供 `MarkdownConfiguration.mathRenderer` 或 vendoring 公式渲染实现。
+- `MMMDKit/README.en.md`
+- `MMMDKit/Docs/Migration-v1-to-v2.md`
 
 ## 常用验证命令
 
 ```bash
 cd MMMDKit
 swift build
-
-cd ../MMMDKitDemos/iOSDemo
-xcodebuild build -scheme MMMDKitiOSDemo -destination 'generic/platform=iOS Simulator' -quiet
-
-cd ../macOSDemo
-xcodebuild build -scheme MMMDKitMacDemo -destination 'platform=macOS' -quiet
+swift test
 ```

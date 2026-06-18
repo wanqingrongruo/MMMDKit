@@ -195,13 +195,25 @@ public struct CodeBlock: Equatable, Sendable {
 }
 
 /// 表格块模型。
+public enum MarkdownTableColumnAlignment: String, Equatable, Sendable {
+    case leading
+    case center
+    case trailing
+}
+
 public struct TableBlock: Equatable, Sendable {
     public var header: [InlineContent]
     public var rows: [[InlineContent]]
+    public var columnAlignments: [MarkdownTableColumnAlignment?]
 
-    public init(header: [InlineContent], rows: [[InlineContent]]) {
+    public init(
+        header: [InlineContent],
+        rows: [[InlineContent]],
+        columnAlignments: [MarkdownTableColumnAlignment?] = []
+    ) {
         self.header = header
         self.rows = rows
+        self.columnAlignments = columnAlignments
     }
 }
 

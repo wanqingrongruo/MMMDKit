@@ -1,6 +1,35 @@
 import Foundation
 import MMMDCore
 
+/// 流式解析与渲染投递过程中的轻量性能指标。
+public struct MarkdownStreamingMetrics: Equatable, Sendable {
+    public var chunkCount: Int
+    public var renderCount: Int
+    public var sourceLength: Int
+    public var parseDuration: TimeInterval
+    public var renderLatency: TimeInterval?
+    public var elapsed: TimeInterval
+    public var createdAt: Date
+
+    public init(
+        chunkCount: Int = 0,
+        renderCount: Int = 0,
+        sourceLength: Int = 0,
+        parseDuration: TimeInterval = 0,
+        renderLatency: TimeInterval? = nil,
+        elapsed: TimeInterval = 0,
+        createdAt: Date = Date()
+    ) {
+        self.chunkCount = chunkCount
+        self.renderCount = renderCount
+        self.sourceLength = sourceLength
+        self.parseDuration = parseDuration
+        self.renderLatency = renderLatency
+        self.elapsed = elapsed
+        self.createdAt = createdAt
+    }
+}
+
 /// 单次流式解析后的渲染差异信息。
 ///
 /// `document` 是当前完整 buffer 解析出的 Markdown 文档；`stableBlockCount`
@@ -20,11 +49,19 @@ public struct MarkdownRenderDiff: Equatable, Sendable {
     public var stableBlockCount: Int
     /// 当前解析阶段。
     public var phase: Phase
+    /// 本次 diff 对应的流式性能指标。
+    public var metrics: MarkdownStreamingMetrics
 
-    public init(document: MarkdownDocument, stableBlockCount: Int, phase: Phase) {
+    public init(
+        document: MarkdownDocument,
+        stableBlockCount: Int,
+        phase: Phase,
+        metrics: MarkdownStreamingMetrics = .init()
+    ) {
         self.document = document
         self.stableBlockCount = stableBlockCount
         self.phase = phase
+        self.metrics = metrics
     }
 }
 
@@ -36,6 +73,8 @@ public final class StreamingMarkdownProcessor {
     private let parser: MarkdownParser
     private let parseOptions: ParseOptions
     private var buffer = ""
+    private var chunkCount = 0
+    private var startedAt: Date?
 
     public var onDiff: ((MarkdownRenderDiff) -> Void)?
 
@@ -50,6 +89,10 @@ public final class StreamingMarkdownProcessor {
 
     /// 追加一段新到达的 Markdown 文本，并立即输出一次 `.streaming` diff。
     public func append(_ delta: String) {
+        if startedAt == nil {
+            startedAt = Date()
+        }
+        chunkCount += 1
         buffer += delta
         emit(phase: .streaming)
     }
@@ -62,12 +105,16 @@ public final class StreamingMarkdownProcessor {
     /// 清空内部 buffer，准备复用该处理器处理下一段流式内容。
     public func reset() {
         buffer.removeAll()
+        chunkCount = 0
+        startedAt = nil
     }
 
     private func emit(phase: MarkdownRenderDiff.Phase) {
+        let parseStartedAt = Date()
         guard let document = try? parser.parse(buffer, options: parseOptions) else {
             return
         }
+        let parseDuration = Date().timeIntervalSince(parseStartedAt)
 
         let stableCount: Int
         switch phase {
@@ -77,6 +124,15 @@ public final class StreamingMarkdownProcessor {
             stableCount = document.blocks.count
         }
 
-        onDiff?(.init(document: document, stableBlockCount: stableCount, phase: phase))
+        let createdAt = Date()
+        let metrics = MarkdownStreamingMetrics(
+            chunkCount: chunkCount,
+            sourceLength: buffer.count,
+            parseDuration: parseDuration,
+            elapsed: startedAt.map { createdAt.timeIntervalSince($0) } ?? 0,
+            createdAt: createdAt
+        )
+
+        onDiff?(.init(document: document, stableBlockCount: stableCount, phase: phase, metrics: metrics))
     }
 }

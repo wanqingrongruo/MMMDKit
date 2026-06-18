@@ -22,8 +22,8 @@ MMMDKit 的代码风格以 Apple 平台原生开发习惯为基础，优先保�
 ## 命名规范
 
 - 模块统一使用 `MMMD` 前缀。
-- UIKit 类型使用 `MarkdownView`、`CodeBlockView` 这类平台自然命名。
-- AppKit 类型在需要区分时使用 `NS` 后缀或 `MarkdownNSView` 形式。
+- SwiftUI 类型使用 `MarkdownText`、`MarkdownDocumentView`、`StreamingMarkdownText` 这类入口清晰的命名。
+- 平台适配类型仅放在模块内部，使用 `Platform` 前缀或后缀表达用途，不作为公开 API 暴露。
 - 协议命名表达能力，例如 `MarkdownParser`、`CodeHighlighter`、`MathRenderer`。
 
 ## 格式化建议

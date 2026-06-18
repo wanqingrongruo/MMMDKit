@@ -9,6 +9,9 @@ public struct FallbackMathRenderer: MathRenderer {
 
     /// 返回 LaTeX 原文的纯文本表示。
     public func render(latex: String, displayMode: Bool, environment: MathEnvironment) async throws -> MathRenderResult {
-        MathRenderResult(representation: .plainText(latex), accessibilityLabel: latex)
+        MathRenderResult(
+            representation: .plainText(LaTeXPlainTextFormatter.fallbackText(for: latex)),
+            accessibilityLabel: latex
+        )
     }
 }

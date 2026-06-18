@@ -8,7 +8,7 @@ enum CmarkNodeType: Equatable {
     case heading(level: Int)
     case blockquote
     case list(style: CmarkListStyle)
-    case table
+    case table(alignments: [MarkdownTableColumnAlignment?])
     case tableRow(isHeader: Bool)
     case tableCell
     case mathBlock(latex: String)

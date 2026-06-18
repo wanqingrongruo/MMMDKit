@@ -93,6 +93,42 @@ final class MarkdownModelTests: XCTestCase {
         XCTAssertEqual(MarkdownTextExtractor.plainText(from: list.items[0].blocks[0]), "First")
     }
 
+    func testParserCreatesDeepNestedUnorderedListBlock() throws {
+        let parser = CmarkMarkdownParser()
+        let document = try parser.parse("""
+        - Top level item 1
+          - Nested item A
+            - Deeply nested item X
+            - Deeply nested item Y
+          - Nested item B
+        - Top level item 2
+          - Nested item C
+        """, options: .init())
+
+        guard case .list(let topList) = document.blocks.first else {
+            return XCTFail("Expected top-level list")
+        }
+
+        XCTAssertEqual(topList.items.count, 2)
+        XCTAssertEqual(MarkdownTextExtractor.plainText(from: topList.items[0].blocks[0]), "Top level item 1")
+
+        guard topList.items[0].blocks.count > 1,
+              case .list(let nestedList) = topList.items[0].blocks[1] else {
+            return XCTFail("Expected nested list under first item")
+        }
+
+        XCTAssertEqual(nestedList.items.count, 2)
+        XCTAssertEqual(MarkdownTextExtractor.plainText(from: nestedList.items[1].blocks[0]), "Nested item B")
+
+        guard nestedList.items[0].blocks.count > 1,
+              case .list(let deepList) = nestedList.items[0].blocks[1] else {
+            return XCTFail("Expected deeply nested list under nested item")
+        }
+
+        XCTAssertEqual(deepList.items.count, 2)
+        XCTAssertEqual(MarkdownTextExtractor.plainText(from: deepList.items[0].blocks[0]), "Deeply nested item X")
+    }
+
     func testParserCreatesOrderedListBlock() throws {
         let parser = CmarkMarkdownParser()
         let document = try parser.parse("""
@@ -126,8 +162,8 @@ final class MarkdownModelTests: XCTestCase {
     func testParserCreatesTableBlock() throws {
         let parser = CmarkMarkdownParser()
         let document = try parser.parse("""
-        | Name | Age |
-        | --- | --- |
+        | Name | Age | Score |
+        | :--- | ---: | :---: |
         | Amy | 5 |
         """, options: .init())
 
@@ -135,7 +171,8 @@ final class MarkdownModelTests: XCTestCase {
             return XCTFail("Expected table block")
         }
 
-        XCTAssertEqual(table.header.map(MarkdownTextExtractor.plainText(from:)), ["Name", "Age"])
+        XCTAssertEqual(table.header.map(MarkdownTextExtractor.plainText(from:)), ["Name", "Age", "Score"])
+        XCTAssertEqual(table.columnAlignments, [.leading, .trailing, .center])
         XCTAssertEqual(table.rows.count, 1)
         XCTAssertEqual(table.rows[0].map(MarkdownTextExtractor.plainText(from:)), ["Amy", "5"])
     }

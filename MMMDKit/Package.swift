@@ -12,75 +12,70 @@ let package = Package(
         .library(name: "MMMDKit", targets: ["MMMDKit"]),
         .library(name: "MMMDCore", targets: ["MMMDCore"]),
         .library(name: "MMMDParserCmark", targets: ["MMMDParserCmark"]),
+        .library(name: "MMMDParserSwiftMarkdown", targets: ["MMMDParserSwiftMarkdown"]),
         .library(name: "MMMDStreaming", targets: ["MMMDStreaming"]),
         .library(name: "MMMDHighlighter", targets: ["MMMDHighlighter"]),
         .library(name: "MMMDMath", targets: ["MMMDMath"]),
         .library(name: "MMMDHTML", targets: ["MMMDHTML"]),
-        .library(name: "MMMDUIKit", targets: ["MMMDUIKit"]),
-        .library(name: "MMMDAppKit", targets: ["MMMDAppKit"])
+        .library(name: "MMMDSwiftUI", targets: ["MMMDSwiftUI"])
     ],
     dependencies: [
-        .package(url: "https://github.com/mgriebling/SwiftMath.git", from: "1.7.3")
+        .package(url: "https://github.com/swiftlang/swift-markdown.git", exact: "0.7.3")
     ],
     targets: [
         .target(
             name: "MMMDKit",
             dependencies: [
                 "MMMDCore",
-                "MMMDParserCmark",
+                "MMMDParserSwiftMarkdown",
                 "MMMDStreaming",
                 "MMMDHighlighter",
                 "MMMDMath",
-                "MMMDHTML"
+                "MMMDHTML",
+                "MMMDSwiftUI"
             ]
         ),
         .target(name: "MMMDCore"),
         .target(name: "MMMDParserCmark", dependencies: ["MMMDCore"]),
+        .target(
+            name: "MMMDParserSwiftMarkdown",
+            dependencies: [
+                "MMMDCore",
+                .product(name: "Markdown", package: "swift-markdown")
+            ]
+        ),
         .target(name: "MMMDStreaming", dependencies: ["MMMDCore"]),
         .target(name: "MMMDHighlighter", dependencies: ["MMMDCore"]),
         .target(name: "MMMDMath", dependencies: ["MMMDCore"]),
         .target(name: "MMMDHTML", dependencies: ["MMMDCore"]),
         .target(
-            name: "MMMDUIKit",
+            name: "MMMDSwiftUI",
             dependencies: [
                 "MMMDCore",
                 "MMMDStreaming",
+                "MMMDParserSwiftMarkdown",
                 "MMMDHighlighter",
                 "MMMDMath",
                 "MMMDHTML",
-                .product(name: "SwiftMath", package: "SwiftMath")
-            ]
-        ),
-        .target(
-            name: "MMMDAppKit",
-            dependencies: [
-                "MMMDCore",
-                "MMMDStreaming",
-                "MMMDHighlighter",
-                "MMMDMath",
-                "MMMDHTML",
-                .product(name: "SwiftMath", package: "SwiftMath")
+                "MMMDParserCmark"
             ]
         ),
         .testTarget(
             name: "MMMDCoreTests",
-            dependencies: ["MMMDCore", "MMMDParserCmark", "MMMDHighlighter", "MMMDHTML"]
+            dependencies: ["MMMDCore", "MMMDParserCmark", "MMMDParserSwiftMarkdown", "MMMDHighlighter", "MMMDHTML"]
         ),
         .testTarget(
             name: "MMMDStreamingTests",
-            dependencies: ["MMMDCore", "MMMDStreaming", "MMMDParserCmark"]
+            dependencies: ["MMMDCore", "MMMDStreaming", "MMMDParserSwiftMarkdown"]
         ),
         .testTarget(
             name: "MMMDPluginTests",
             dependencies: ["MMMDCore"]
         ),
         .testTarget(
-            name: "MMMDAppKitTests",
-            dependencies: ["MMMDAppKit"]
-        ),
-        .testTarget(
-            name: "MMMDUIKitTests",
-            dependencies: ["MMMDUIKit"]
+            name: "MMMDSwiftUITests",
+            dependencies: ["MMMDCore", "MMMDParserSwiftMarkdown", "MMMDSwiftUI"],
+            resources: [.process("__Snapshots__")]
         )
     ]
 )

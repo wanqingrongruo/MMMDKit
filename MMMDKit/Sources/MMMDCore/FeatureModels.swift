@@ -47,7 +47,19 @@ public struct CodeTheme: Equatable, Sendable {
         ]
     )
 
-    public static let `default` = CodeTheme.github
+    public static let streamingDefault = CodeTheme(
+        name: "streaming-default",
+        foregroundColor: "streamingCodeText",
+        backgroundColor: "streamingCodeBlockBackground",
+        tokenStyles: [
+            "keyword": .init(foregroundColor: "#DDBCF7", fontTraits: ["bold"]),
+            "string": .init(foregroundColor: "#B8E6A2"),
+            "number": .init(foregroundColor: "#F5D18C"),
+            "comment": .init(foregroundColor: "#B3ADA8", fontTraits: ["italic"])
+        ]
+    )
+
+    public static let `default` = CodeTheme.streamingDefault
 }
 
 /// 单个代码语法单元（Token）的视觉样式

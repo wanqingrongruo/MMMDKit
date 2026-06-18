@@ -1,632 +1,190 @@
-# MMMDKit 使用与配置教程
+# MMMDKit SwiftUI 使用教程
 
-MMMDKit 是一个面向 Apple 平台的模块化原生 Markdown 渲染框架。它把 Markdown 解析、流式处理、代码高亮、公式渲染、HTML 策略和 UIKit/AppKit 展示拆成独立模块，方便业务按需组合。
+MMMDKit v2 只暴露 SwiftUI 渲染入口。UIKit/AppKit 旧入口请参考 `Migration-v1-to-v2.md`。
 
-本教程覆盖从安装到静态渲染、AI 流式输出、主题配置和扩展点的常见接入路径。
+## 安装
 
----
-
-## 1. 选择模块
-
-### 1.1 常用模块
-
-- `MMMDCore`：文档模型、协议、主题、交互回调和配置项。
-- `MMMDParserCmark`：默认 Markdown 解析器，输出 `MarkdownDocument`。
-- `MMMDStreaming`：流式文本 buffer、稳定块判断、节流更新。
-- `MMMDHighlighter`：默认代码高亮实现，也提供 `CodeHighlighter` 协议。
-- `MMMDMath`：公式渲染协议和纯文本 fallback。
-- `MMMDHTML`：HTML 清洗和渲染能力判断。
-- `MMMDUIKit`：iOS/iPadOS 的 `MarkdownView`。
-- `MMMDAppKit`：macOS 的 `MarkdownNSView`、`MarkdownCollectionViewHost` 和 AppKit 尺寸测量。
-
-### 1.2 推荐组合
-
-iOS/iPadOS 应用：
+SPM 推荐使用 umbrella product：
 
 ```swift
-import MMMDCore
-import MMMDParserCmark
-import MMMDUIKit
+.product(name: "MMMDKit", package: "MMMDKit")
 ```
 
-macOS 应用：
-
-```swift
-import MMMDCore
-import MMMDParserCmark
-import MMMDAppKit
-```
-
-如果只需要无 UI 的流式解析，例如在 ViewModel 或服务层预处理，可以只引入：
-
-```swift
-import MMMDCore
-import MMMDParserCmark
-import MMMDStreaming
-```
-
----
-
-## 2. 安装
-
-### 2.1 Swift Package Manager
-
-在 Xcode 中添加 Package，或在 `Package.swift` 中声明：
-
-```swift
-dependencies: [
-    .package(url: "git@github.com:wanqingrongruo/MMMDKit.git", from: "0.1.0")
-]
-```
-
-iOS target 常用 product：
-
-```swift
-.product(name: "MMMDParserCmark", package: "MMMDKit")
-.product(name: "MMMDUIKit", package: "MMMDKit")
-```
-
-macOS target 常用 product：
-
-```swift
-.product(name: "MMMDParserCmark", package: "MMMDKit")
-.product(name: "MMMDAppKit", package: "MMMDKit")
-```
-
-如果需要显式使用流式或高亮模块，也可以加入：
-
-```swift
-.product(name: "MMMDStreaming", package: "MMMDKit")
-.product(name: "MMMDHighlighter", package: "MMMDKit")
-```
-
-通过 SPM 引入 `MMMDUIKit` / `MMMDAppKit` 时，会传递引入 SwiftMath，块级公式默认使用原生公式排版。
-
-### 2.2 CocoaPods
+CocoaPods：
 
 ```ruby
-pod "MMMDCore"
-pod "MMMDParserCmark"
-pod "MMMDStreaming"
-pod "MMMDHighlighter"
-pod "MMMDUIKit"   # iOS/iPadOS
-# pod "MMMDAppKit" # macOS
+pod "MMMDKit"
 ```
 
-CocoaPods 当前不会自动引入 SwiftMath，所以公式块会 fallback 为 LaTeX 文本。需要真实公式排版时，请自行实现 `MathRenderer` 并注入到 `MarkdownConfiguration.mathRenderer`。
+注意：SPM 默认使用 `MMMDParserSwiftMarkdown`，CocoaPods 默认使用 `MMMDParserCmark` fallback parser。
 
----
-
-## 3. UIKit 静态渲染
-
-### 3.1 创建视图
+## 静态 Markdown
 
 ```swift
-import UIKit
-import MMMDCore
-import MMMDParserCmark
-import MMMDHighlighter
-import MMMDUIKit
+import SwiftUI
+import MMMDKit
 
-final class MarkdownViewController: UIViewController {
-    private let markdownView = MarkdownView()
-    private let parser = CmarkMarkdownParser()
+struct ArticleView: View {
+    let markdown: String
 
-    override func viewDidLoad() {
-        super.viewDidLoad()
-        view.backgroundColor = .systemBackground
-
-        markdownView.translatesAutoresizingMaskIntoConstraints = false
-        view.addSubview(markdownView)
-        NSLayoutConstraint.activate([
-            markdownView.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 16),
-            markdownView.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -16),
-            markdownView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 16),
-            markdownView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -16)
-        ])
-
-        markdownView.configuration = makeConfiguration()
-        renderMarkdown()
-    }
-
-    private func makeConfiguration() -> MarkdownConfiguration {
-        MarkdownConfiguration(
-            actions: .init(
-                onLinkTap: { url in
-                    UIApplication.shared.open(url)
-                },
-                onCopyCode: { code, language in
-                    UIPasteboard.general.string = code
-                    print("已复制代码，语言：\(language ?? "unknown")")
-                }
-            ),
-            codeHighlighter: KeywordCodeHighlighter(),
-            codeBlockMaximumWidth: 640
-        )
-    }
-
-    private func renderMarkdown() {
-        let source = """
-        # MMMDKit
-
-        这是一段 **Markdown**，包含代码块：
-
-        ```swift
-        let message = "Hello"
-        print(message)
-        ```
-        """
-
-        do {
-            let document = try parser.parse(source)
-            markdownView.render(document)
-        } catch {
-            assertionFailure("Markdown 解析失败：\(error)")
+    var body: some View {
+        ScrollView {
+            MarkdownText(markdown)
+                .padding()
         }
     }
 }
 ```
 
-### 3.2 更新已有内容
-
-当你拿到一份完整 Markdown 文本时，重新解析并调用 `render(_:)` 即可：
+## 预解析文档
 
 ```swift
-let document = try parser.parse(newMarkdown)
-markdownView.render(document)
+let parser = SwiftMarkdownParser()
+let document = try parser.parse(markdown)
+
+MarkdownDocumentView(document: document)
 ```
 
-`render(_:)` 会应用 `configuration.plugins`，并重建内部视图层级。建议在内容确实变化时调用，避免不必要的 UI 重建。
+## 流式输出
 
----
-
-## 4. AI 流式渲染
-
-### 4.1 直接使用视图内置流式 API
-
-对于 ChatGPT、LLM SSE、WebSocket 等不断返回 delta 文本的场景，推荐使用视图内置 API：
+Delta 模式适合 LLM token/chunk：
 
 ```swift
-markdownView.configuration = MarkdownConfiguration(codeHighlighter: KeywordCodeHighlighter())
-markdownView.startStreaming(parser: CmarkMarkdownParser(), updateInterval: 0.08)
-
-for await delta in aiTextStream {
-    markdownView.appendStreamingText(delta)
-}
-
-markdownView.finishStreaming()
+StreamingMarkdownText(source: deltaStream, inputMode: .delta)
 ```
 
-关键点：
-
-- `appendStreamingText(_:)` 可以持续追加新文本，不需要业务自己维护完整字符串。
-- `updateInterval` 控制 UI 刷新节流，默认 `0.08` 秒，适合多数打字机效果。
-- 流式阶段最后一个块通常不稳定，库会避免对尾部代码块反复高亮，减少闪烁。
-- `finishStreaming()` 会触发最终渲染，此时所有块都视为稳定。
-
-### 4.2 重置流式内容
-
-开始一条新的回答前，可以重置当前流：
+Snapshot 模式适合每次输出完整文本：
 
 ```swift
-markdownView.resetStreaming()
-markdownView.startStreaming(parser: CmarkMarkdownParser())
+StreamingMarkdownText(source: snapshotStream, inputMode: .snapshot)
 ```
 
-如果你每次都调用新的 `startStreaming(...)`，旧的会话会被视图替换。
-
-### 4.3 获取每次 diff
-
-如果业务需要在每次文档更新时同步滚动、计算高度或更新外部状态，可以使用 `onUpdate`：
+如果业务已经持有 session：
 
 ```swift
-markdownView.startStreaming(
-    parser: CmarkMarkdownParser(),
-    updateInterval: 0.08
-) { diff in
-    print("当前块数量：\(diff.document.blocks.count)")
-    print("稳定块数量：\(diff.stableBlockCount)")
-}
+let session = StreamingMarkdownSession(parser: SwiftMarkdownParser())
+StreamingMarkdownText(session: session)
 ```
 
-`stableBlockCount` 表示前多少个块已经稳定。业务侧做虚拟列表、缓存布局或局部刷新时，可以优先复用这些稳定块。
-
-### 4.4 无 UI 的流式解析
-
-如果你在 ViewModel 层处理 Markdown，可以直接使用 `StreamingMarkdownSession`：
+## 自定义样式
 
 ```swift
-let session = StreamingMarkdownSession(
-    parser: CmarkMarkdownParser(),
-    updateInterval: 0.08,
-    deliveryQueue: .main
+var configuration = MarkdownConfiguration()
+configuration.theme = MarkdownTheme(
+    colors: MarkdownColors(
+        text: "#24292F",
+        secondaryText: "#57606A",
+        link: "#0969DA",
+        codeBackground: "#F6F8FA",
+        tableBorder: "#D0D7DE"
+    )
 )
 
-session.onUpdate = { diff in
-    // diff.document 是当前完整 MarkdownDocument
-    // diff.phase == .finished 时，所有块都稳定
-}
-
-session.append("## 标题\n\n")
-session.append("正文第一段")
-session.finish()
+MarkdownText(markdown, configuration: configuration)
 ```
 
-底层还有 `StreamingMarkdownProcessor`，它不做线程切换和节流，适合测试、基准性能或你自己管理调度队列的场景。
-
----
-
-## 5. macOS 接入
-
-macOS 使用 `MarkdownNSView`，API 与 UIKit 版本保持一致：
-
-```swift
-import AppKit
-import MMMDCore
-import MMMDParserCmark
-import MMMDHighlighter
-import MMMDAppKit
-
-final class MarkdownViewController: NSViewController {
-    private let scrollView = NSScrollView()
-    private let markdownView = MarkdownNSView()
-
-    override func loadView() {
-        view = NSView()
-    }
-
-    override func viewDidLoad() {
-        super.viewDidLoad()
-
-        scrollView.hasVerticalScroller = true
-        scrollView.drawsBackground = false
-        scrollView.translatesAutoresizingMaskIntoConstraints = false
-        view.addSubview(scrollView)
-
-        markdownView.translatesAutoresizingMaskIntoConstraints = false
-        scrollView.documentView = markdownView
-        NSLayoutConstraint.activate([
-            scrollView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 20),
-            scrollView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20),
-            scrollView.topAnchor.constraint(equalTo: view.topAnchor, constant: 20),
-            scrollView.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -20),
-
-            markdownView.leadingAnchor.constraint(equalTo: scrollView.contentView.leadingAnchor),
-            markdownView.trailingAnchor.constraint(equalTo: scrollView.contentView.trailingAnchor),
-            markdownView.topAnchor.constraint(equalTo: scrollView.contentView.topAnchor),
-            markdownView.widthAnchor.constraint(equalTo: scrollView.contentView.widthAnchor)
-        ])
-
-        markdownView.configuration = MarkdownConfiguration(codeHighlighter: KeywordCodeHighlighter())
-        markdownView.render(try! CmarkMarkdownParser().parse("# macOS\n\nHello MMMDKit"))
-    }
-}
-```
-
-### 5.1 视图职责
-
-`MarkdownNSView` 是非滚动内容视图，不会自己创建 `NSScrollView`。它适合放在：
-
-- 聊天气泡或 `NSCollectionViewItem` 内部。
-- 已有 `NSScrollView` 的 document view 中。
-- SwiftUI 的 `NSViewRepresentable` 中。
-
-macOS 渲染层内部会先把 `MarkdownDocument` 转换为稳定的 render plan，再用同一套测量器生成布局。`MarkdownNSView`、`MarkdownLayoutEngine.measure(...)` 和 `MarkdownCollectionViewHost` 共享这条链路，因此列表预排版和实际渲染的高度会保持一致。
-
-### 5.2 长文档滚动容器
-
-如果你希望库直接提供滚动容器，可以使用 `MarkdownCollectionViewHost`：
-
-```swift
-let host = MarkdownCollectionViewHost()
-host.translatesAutoresizingMaskIntoConstraints = false
-view.addSubview(host)
-
-host.render(document, configuration: configuration)
-```
-
-`MarkdownCollectionViewHost` 内部使用 `NSScrollView + NSCollectionView` 承载 block item，适合长文档阅读。聊天列表不建议再在每个消息 cell 里嵌套它；聊天气泡应优先使用 `MarkdownNSView`，由外层列表负责滚动。
-
-### 5.3 macOS 聊天列表建议
-
-在 `NSCollectionView` 或 `NSTableView` 中展示聊天消息时，建议先建立自己的消息布局模型：
-
-```swift
-struct MessageLayoutModel {
-    let message: ChatMessage
-    let markdownLayout: MarkdownLayoutResult
-    let bubbleSize: CGSize
-}
-
-let markdownLayout = MarkdownLayoutEngine.measure(
-    document: message.document,
-    fittingWidth: bubbleContentWidth,
-    configuration: configuration
-)
-```
-
-之后 `collectionView(_:layout:sizeForItemAt:)` 只读取预计算高度，不要在 delegate 回调里重新 parse 或重新测量。窗口宽度变化时，再按新的可用宽度批量重建布局模型。
-
----
-
-## 6. 内容尺寸测量
-
-如果你在聊天列表、collection view 或自定义气泡中需要提前计算高度，可以使用渲染模块提供的 `MarkdownLayoutEngine`。
-
-### 6.1 测量 Markdown 内容
-
-```swift
-let document = try CmarkMarkdownParser().parse(markdown)
-let configuration = MarkdownConfiguration(codeHighlighter: KeywordCodeHighlighter())
-
-let layout = MarkdownLayoutEngine.measure(
-    document: document,
-    fittingWidth: 320,
-    configuration: configuration
-)
-
-print("内容宽度：\(layout.size.width)")
-print("内容高度：\(layout.size.height)")
-```
-
-`MarkdownLayoutEngine` 只测量 Markdown 内容本身，不包含业务容器的额外 UI，例如头像、标题、气泡内边距、发送状态等。聊天气泡通常可以这样组合：
-
-```swift
-let contentInsets = UIEdgeInsets(top: 10, left: 14, bottom: 12, right: 14)
-let titleHeight: CGFloat = 18
-let titleSpacing: CGFloat = 8
-let maxBubbleWidth = collectionView.bounds.width * 0.9
-
-let markdownLayout = MarkdownLayoutEngine.measure(
-    document: message.document,
-    fittingWidth: maxBubbleWidth - contentInsets.left - contentInsets.right,
-    configuration: configuration
-)
-
-let bubbleSize = CGSize(
-    width: min(markdownLayout.size.width + contentInsets.left + contentInsets.right, maxBubbleWidth),
-    height: contentInsets.top + titleHeight + titleSpacing + markdownLayout.size.height + contentInsets.bottom
-)
-```
-
-macOS 中可使用 `NSEdgeInsets` 表达同样的气泡内边距，并把测量结果保存到 `NSCollectionView`/`NSTableView` 的行模型中。
-
-### 6.2 使用建议
-
-- UIKit 版本的测量引擎适合列表预排版，内部复用文本排版和块级元素高度计算。
-- AppKit 版本复用统一 render plan 和 block measurer，`MarkdownNSView`、`MarkdownCollectionViewHost` 与 `MarkdownLayoutEngine` 会得到同一套高度结果。
-- 测量结果只负责 Markdown 内容，业务容器尺寸仍应由业务侧组合。
-- 如果内容在流式变化，建议配合 `MarkdownRenderDiff.stableBlockCount` 缓存稳定块，减少重复测量。
-- macOS 列表中应把测量结果保存到消息 layout model，窗口宽度变化时再重建，不要在 `sizeForItemAt` 高频回调中反复测量。
-
----
-
-## 7. SwiftUI 包装
-
-MMMDKit 当前提供 UIKit/AppKit 视图。SwiftUI 中可以用 `UIViewRepresentable` 或 `NSViewRepresentable` 包装。
-
-### 7.1 iOS SwiftUI
-
-```swift
-import SwiftUI
-import MMMDCore
-import MMMDParserCmark
-import MMMDUIKit
-
-struct MarkdownRepresentable: UIViewRepresentable {
-    let markdown: String
-    var configuration = MarkdownConfiguration()
-
-    func makeUIView(context: Context) -> MarkdownView {
-        let view = MarkdownView()
-        view.configuration = configuration
-        return view
-    }
-
-    func updateUIView(_ uiView: MarkdownView, context: Context) {
-        guard let document = try? CmarkMarkdownParser().parse(markdown) else { return }
-        uiView.configuration = configuration
-        uiView.render(document)
-    }
-}
-```
-
-### 7.2 macOS SwiftUI
-
-```swift
-import SwiftUI
-import MMMDCore
-import MMMDParserCmark
-import MMMDAppKit
-
-struct MarkdownRepresentable: NSViewRepresentable {
-    let markdown: String
-    var configuration = MarkdownConfiguration()
-
-    func makeNSView(context: Context) -> MarkdownNSView {
-        let view = MarkdownNSView()
-        view.configuration = configuration
-        return view
-    }
-
-    func updateNSView(_ nsView: MarkdownNSView, context: Context) {
-        guard let document = try? CmarkMarkdownParser().parse(markdown) else { return }
-        nsView.configuration = configuration
-        nsView.render(document)
-    }
-}
-```
-
----
-
-## 8. 配置项
-
-### 8.1 交互回调
-
-`MarkdownActions` 集中管理用户交互：
-
-```swift
-let actions = MarkdownActions(
-    onLinkTap: { url in
-        UIApplication.shared.open(url)
-    },
-    onCopyCode: { code, language in
-        UIPasteboard.general.string = code
-    },
-    onCopyTable: { tableText in
-        UIPasteboard.general.string = tableText
-    },
-    onImageTap: { imageBlock in
-        print("点击图片：\(imageBlock.url?.absoluteString ?? "")")
-    }
-)
-
-var configuration = MarkdownConfiguration(actions: actions)
-```
-
-macOS 中把 `UIApplication` / `UIPasteboard` 替换为 `NSWorkspace` / `NSPasteboard` 即可。
-
-### 8.2 工具栏按钮
-
-代码块和表格顶部工具栏可控制复制、下载和展开按钮：
-
-```swift
-let toolbarOptions = ToolbarOptions(
-    showsCopy: true,
-    showsDownload: false,
-    showsExpand: false
-)
-
-let configuration = MarkdownConfiguration(toolbarOptions: toolbarOptions)
-```
-
-### 8.3 主题
-
-主题使用平台无关的字符串 token，渲染层会把它们映射为系统颜色和字体：
-
-```swift
-let theme = MarkdownTheme(
-    typography: .init(
-        body: .init(textStyle: "body", pointSize: 16, weight: "regular"),
-        code: .init(textStyle: "body", pointSize: 14, weight: "regular", design: "monospaced"),
-        heading1: .init(textStyle: "title2", pointSize: 22, weight: "medium"),
-        heading2: .init(textStyle: "title3", pointSize: 20, weight: "medium")
-    ),
-    colors: .init(
-        text: "label",
-        secondaryText: "secondaryLabel",
-        link: "systemBlue",
-        codeBackground: "secondarySystemBackground",
-        tableBorder: "separator"
-    ),
-    spacing: .init(
-        blockSpacing: 14,
-        paragraphSpacing: 10,
-        listIndent: 20,
-        codePadding: 12
-    ),
-    codeTheme: .github
-)
-
-let configuration = MarkdownConfiguration(theme: theme)
-```
-
-### 8.4 代码高亮
-
-内置两种高亮器：
-
-- `PlainCodeHighlighter`：不做语法分析，只返回纯文本 token。
-- `KeywordCodeHighlighter`：轻量识别 Swift 关键字、字符串、数字和注释。
+## 自定义交互
 
 ```swift
 let configuration = MarkdownConfiguration(
-    codeHighlighter: KeywordCodeHighlighter()
+    actions: MarkdownActions(
+        onLinkTap: { url in
+            print("link", url)
+        },
+        onImageTap: { image in
+            print("image", image.url?.absoluteString ?? image.alt)
+        },
+        onCopyImageURL: { image in
+            print("image url copied", image.url?.absoluteString ?? "")
+        },
+        onCopyTable: { text in
+            print("table copied", text)
+        }
+    )
 )
 ```
 
-自定义高亮器实现 `CodeHighlighter`：
+## 自定义能力
 
 ```swift
-struct MyCodeHighlighter: CodeHighlighter {
-    func highlight(code: String, language: String?, theme: CodeTheme) async throws -> HighlightResult {
-        HighlightResult(language: language, tokens: [
-            .init(text: code, scope: nil)
-        ])
-    }
-}
+let configuration = MarkdownConfiguration(
+    codeHighlighter: CachingCodeHighlighter(base: KeywordCodeHighlighter()),
+    mathRenderer: FallbackMathRenderer(),
+    imageLoader: CachingImageLoader(base: MyImageLoader()),
+    localization: .simplifiedChinese
+)
 ```
 
-渲染层会根据 `HighlightToken.scope` 和 `CodeTheme.tokenStyles` 生成最终 attributed string。
-
-### 8.5 图片加载
-
-实现 `ImageLoader` 后注入配置：
+实现图片加载器：
 
 ```swift
-struct NetworkImageLoader: ImageLoader {
+struct MyImageLoader: ImageLoader {
     func loadImageData(from url: URL) async throws -> Data {
-        let (data, _) = try await URLSession.shared.data(from: url)
-        return data
+        try Data(contentsOf: url)
     }
 }
-
-let configuration = MarkdownConfiguration(imageLoader: NetworkImageLoader())
 ```
 
-### 8.6 公式渲染
-
-SPM 引入 UI 模块时，默认会获得 SwiftMath 公式排版。若你需要自定义公式渲染器，实现 `MathRenderer`：
+`CachingImageLoader` 会按 URL 复用已加载的图片数据；如果图片加载失败，默认 SwiftUI UI 会展示失败原因和重试按钮。缓存淘汰策略可以按条数、字节数和 FIFO/LRU 配置：
 
 ```swift
-struct PlainMathRenderer: MathRenderer {
-    func render(latex: String, displayMode: Bool, environment: MathEnvironment) async throws -> MathRenderResult {
-        MathRenderResult(representation: .plainText(latex), accessibilityLabel: latex)
-    }
-}
-
-let configuration = MarkdownConfiguration(mathRenderer: PlainMathRenderer())
+let loader = CachingImageLoader(
+    base: MyImageLoader(),
+    cacheConfiguration: ImageDataCacheConfiguration(
+        maximumEntryCount: 200,
+        maximumByteCount: 20 * 1024 * 1024,
+        evictionStrategy: .leastRecentlyUsed
+    )
+)
 ```
 
-### 8.7 插件
+## 布局与大内容
 
-插件用于在渲染前改写 AST：
+默认 SwiftUI renderer 会对大表格启用内部 lazy 滚动和 sticky header，并使用平台字体测量内容宽度。GFM 表格中的 `:---`、`:---:`、`---:` 会映射到 leading、center、trailing 列对齐；图片会限制默认展示高度。业务可以按场景调整：
 
 ```swift
-struct FooterPlugin: MarkdownPlugin {
-    func transform(document: MarkdownDocument, context: PluginContext) throws -> MarkdownDocument {
-        var document = document
-        document.blocks.append(.paragraph(.init(text: "由 MMMDKit 渲染")))
-        return document
-    }
-}
-
-let configuration = MarkdownConfiguration(plugins: [FooterPlugin()])
+let configuration = MarkdownConfiguration(
+    layoutOptions: MarkdownLayoutOptions(
+        tableMaximumVisibleRows: 30,
+        tableMaximumHeight: 360,
+        tableCellMinWidth: 120,
+        tableCellMaxWidth: 260,
+        imageMaximumHeight: 280,
+        showsDefaultImagePreview: true
+    )
+)
 ```
 
----
+如果业务要完全自定义图片预览，可以关闭内置 sheet，并通过 `onImageTap` 接管：
 
-## 9. 常见建议
+```swift
+let configuration = MarkdownConfiguration(
+    actions: MarkdownActions(onImageTap: { image in
+        openCustomPreview(image)
+    }),
+    layoutOptions: .init(showsDefaultImagePreview: false)
+)
+```
 
-- 对完整静态内容使用 `render(_:)`；对 AI delta 使用 `startStreaming(...)` + `appendStreamingText(_:)`。
-- 流式刷新频率不宜过高，`updateInterval` 建议从 `0.06` 到 `0.12` 秒之间调整。
-- 代码块较多时建议提供可缓存的高亮器；库内会对稳定代码块缓存渲染结果。
-- 图片加载器应自行处理缓存、鉴权和错误占位。
-- HTML 清洗器只是基础防护，不应替代服务端安全策略。
-- `MarkdownConfiguration` 应在渲染前设置；修改配置后需要重新 `render(_:)` 才能让已有内容使用新配置。
+## Snapshot Fixtures
 
----
-
-## 10. 调试与验证
-
-库目录位于仓库的 `MMMDKit/`。常用验证命令：
+SwiftUI snapshot 测试默认会校验 PNG fixture 是否存在，并用 golden metrics 检查渲染范围。需要重新录制图片时运行：
 
 ```bash
-cd MMMDKit
-swift test
-
-cd ..
-xcodebuild build -project MMMDKitDemos/iOSDemo/MMMDKitiOSDemo.xcodeproj -scheme MMMDKitiOSDemo -destination 'generic/platform=iOS Simulator'
-xcodebuild build -project MMMDKitDemos/macOSDemo/MMMDKitMacDemo.xcodeproj -scheme MMMDKitMacDemo -destination 'platform=macOS'
+MMMD_RECORD_SNAPSHOTS=1 swift test --filter SwiftUISnapshotTests
 ```
 
-如果 Xcode 出现模块找不到或旧 API 报错，优先执行 `File > Packages > Reset Package Caches`，再重新打开工程。
+录制结果位于 `Tests/MMMDSwiftUITests/__Snapshots__/`，可以直接打开 PNG 审查。
+
+## 流式指标
+
+`MarkdownRenderDiff.metrics` 包含：
+
+- `chunkCount`
+- `renderCount`
+- `sourceLength`
+- `parseDuration`
+- `renderLatency`
+- `elapsed`
+
+Demo 可以用这些指标展示 streaming 性能面板。

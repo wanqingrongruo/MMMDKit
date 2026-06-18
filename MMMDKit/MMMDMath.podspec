@@ -1,6 +1,6 @@
 Pod::Spec.new do |s|
   s.name = "MMMDMath"
-  s.version = "0.1.0"
+  s.version = "0.2.0-alpha"
   s.summary = "MMMDKit 的 LaTeX 数学公式渲染模块。"
   s.homepage = "https://github.com/wanqingrongruo/MMMDKit"
   s.license = { :type => "MIT", :file => "LICENSE" }

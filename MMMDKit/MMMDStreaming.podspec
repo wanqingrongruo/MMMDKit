@@ -1,6 +1,6 @@
 Pod::Spec.new do |s|
   s.name = "MMMDStreaming"
-  s.version = "0.1.0"
+  s.version = "0.2.0-alpha"
   s.summary = "MMMDKit 的 AI 流式 Markdown 处理模块。"
   s.homepage = "https://github.com/wanqingrongruo/MMMDKit"
   s.license = { :type => "MIT", :file => "LICENSE" }

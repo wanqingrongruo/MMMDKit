@@ -1,6 +1,6 @@
 Pod::Spec.new do |s|
   s.name = "MMMDCore"
-  s.version = "0.1.0"
+  s.version = "0.2.0-alpha"
   s.summary = "MMMDKit 的核心模型与协议模块。"
   s.homepage = "https://github.com/wanqingrongruo/MMMDKit"
   s.license = { :type => "MIT", :file => "LICENSE" }

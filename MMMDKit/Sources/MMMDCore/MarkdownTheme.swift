@@ -23,7 +23,12 @@ public struct MarkdownTheme: Equatable, Sendable {
         self.codeTheme = codeTheme
     }
 
-    public static let `default` = MarkdownTheme()
+    public static let `default` = MarkdownTheme(
+        typography: .streamingDefault,
+        colors: .streamingDefault,
+        spacing: .streamingDefault,
+        codeTheme: .streamingDefault
+    )
 }
 
 /// 定义不同语义层级文本的字体配置
@@ -49,12 +54,14 @@ public struct MarkdownTypography: Equatable, Sendable {
         self.heading2 = heading2
     }
 
-    public static let `default` = MarkdownTypography(
-        body: .init(textStyle: "body", pointSize: 16, weight: "regular"),
-        code: .init(textStyle: "body", pointSize: 14, weight: "regular", design: "monospaced"),
-        heading1: .init(textStyle: "title2", pointSize: 20, weight: "medium"),
-        heading2: .init(textStyle: "title3", pointSize: 18, weight: "medium")
+    public static let streamingDefault = MarkdownTypography(
+        body: .init(textStyle: "body", pointSize: 17, weight: "regular"),
+        code: .init(textStyle: "body", pointSize: 15, weight: "regular", design: "monospaced"),
+        heading1: .init(textStyle: "largeTitle", pointSize: 28, weight: "regular"),
+        heading2: .init(textStyle: "title2", pointSize: 24, weight: "regular")
     )
+
+    public static let `default` = streamingDefault
 }
 
 /// 表示一种特定的字体规格单元
@@ -89,28 +96,50 @@ public struct MarkdownColors: Equatable, Sendable {
     public var codeBackground: String
     /// 表格边框和内部网格线颜色
     public var tableBorder: String
+    /// 代码块主体背景色
+    public var codeBlockBackground: String
+    /// 代码块头部文字和按钮颜色
+    public var codeBlockHeaderText: String
+    /// 表格头部背景色
+    public var tableHeaderBackground: String
+    /// 引用块左侧竖线颜色
+    public var quoteBorder: String
 
     public init(
         text: String,
         secondaryText: String,
         link: String,
         codeBackground: String,
-        tableBorder: String
+        tableBorder: String,
+        codeBlockBackground: String? = nil,
+        codeBlockHeaderText: String? = nil,
+        tableHeaderBackground: String? = nil,
+        quoteBorder: String? = nil
     ) {
         self.text = text
         self.secondaryText = secondaryText
         self.link = link
         self.codeBackground = codeBackground
         self.tableBorder = tableBorder
+        self.codeBlockBackground = codeBlockBackground ?? codeBackground
+        self.codeBlockHeaderText = codeBlockHeaderText ?? secondaryText
+        self.tableHeaderBackground = tableHeaderBackground ?? codeBackground
+        self.quoteBorder = quoteBorder ?? tableBorder
     }
 
-    public static let `default` = MarkdownColors(
-        text: "label",
-        secondaryText: "secondaryLabel",
-        link: "systemBlue",
-        codeBackground: "secondarySystemBackground",
-        tableBorder: "separator"
+    public static let streamingDefault = MarkdownColors(
+        text: "streamingText",
+        secondaryText: "streamingSecondaryText",
+        link: "streamingLink",
+        codeBackground: "streamingCodeBackground",
+        tableBorder: "streamingTableBorder",
+        codeBlockBackground: "streamingCodeBlockBackground",
+        codeBlockHeaderText: "streamingCodeBlockHeaderText",
+        tableHeaderBackground: "streamingTableHeaderBackground",
+        quoteBorder: "streamingQuoteBorder"
     )
+
+    public static let `default` = streamingDefault
 }
 
 /// 定义不同区块与元素间的空间排版尺度（以 pt 为单位）
@@ -119,22 +148,34 @@ public struct MarkdownSpacing: Equatable, Sendable {
     public var blockSpacing: Double
     /// 段落内部换行或同类型小块级元素的垂直间距
     public var paragraphSpacing: Double
+    /// 段落内部文本行距
+    public var lineSpacing: Double
     /// 列表项相比外部正文的基础缩进距离
     public var listIndent: Double
     /// 代码块内部内容与边界的内边距 (Padding)
     public var codePadding: Double
 
-    public init(blockSpacing: Double, paragraphSpacing: Double, listIndent: Double, codePadding: Double) {
+    public init(
+        blockSpacing: Double,
+        paragraphSpacing: Double,
+        listIndent: Double,
+        codePadding: Double,
+        lineSpacing: Double? = nil
+    ) {
         self.blockSpacing = blockSpacing
         self.paragraphSpacing = paragraphSpacing
+        self.lineSpacing = lineSpacing ?? paragraphSpacing
         self.listIndent = listIndent
         self.codePadding = codePadding
     }
 
-    public static let `default` = MarkdownSpacing(
-        blockSpacing: 14,
-        paragraphSpacing: 10,
-        listIndent: 20,
-        codePadding: 12
+    public static let streamingDefault = MarkdownSpacing(
+        blockSpacing: 30,
+        paragraphSpacing: 8,
+        listIndent: 22,
+        codePadding: 16,
+        lineSpacing: 5
     )
+
+    public static let `default` = streamingDefault
 }

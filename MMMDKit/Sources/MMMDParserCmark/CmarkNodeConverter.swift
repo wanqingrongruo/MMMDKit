@@ -69,9 +69,16 @@ enum CmarkNodeConverter {
             )
         }
 
+        let alignments: [MarkdownTableColumnAlignment?]
+        if case .table(let parsedAlignments) = node.type {
+            alignments = parsedAlignments
+        } else {
+            alignments = []
+        }
+
         let header = rows.first(where: \.isHeader)?.cells ?? []
         let body = rows.filter { !$0.isHeader }.map(\.cells)
-        return .table(.init(header: header, rows: body))
+        return .table(.init(header: header, rows: body, columnAlignments: alignments))
     }
 
     private static func listStyle(from style: CmarkListStyle) -> ListBlock.Style {

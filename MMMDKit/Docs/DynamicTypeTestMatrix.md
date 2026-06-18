@@ -2,7 +2,7 @@
 
 ## 目标
 
-MMMDKit 的 UIKit/AppKit 渲染层必须在不同字号、不同内容类型和不同容器宽度下保持可读、不卡顿、不截断。
+MMMDKit 的 SwiftUI 渲染层必须在不同字号、不同内容类型和不同容器宽度下保持可读、不卡顿、不截断。
 
 ## iOS / iPadOS 测试档位
 
@@ -41,4 +41,4 @@ MMMDKit 的 UIKit/AppKit 渲染层必须在不同字号、不同内容类型和�
 - 代码块保持等宽字体。
 - 列表 marker 与正文基线对齐。
 - 引用块指示线高度覆盖完整内容。
-- collection host 在字号变化后可以 reload 并重新测量。
+- `List` / `ScrollView` / `LazyVStack` 场景在字号变化后可以稳定重新布局。

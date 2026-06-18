@@ -1,169 +1,80 @@
-# MMMDKit 架构设计
+# MMMDKit v2 Architecture
 
-## 产品定位
+MMMDKit v2 是 SwiftUI-only 架构。UIKit/AppKit 只允许作为内部平台适配细节，不再作为公开渲染 API。
 
-MMMDKit 不是简单的“Markdown 转富文本”工具，而是面向 AI 输出和复杂文档的 Apple 原生 Markdown 渲染框架。
-
-框架围绕以下原则设计：
-
-- Parser 可替换。
-- Block Model 保持稳定。
-- Renderer 可注册、可替换。
-- 复杂能力按独立模块拆分。
-- iOS/iPadOS 使用 UIKit，macOS 使用 AppKit。
-- AI 流式输出作为一等能力。
-
-## 渲染管线
+## 分层
 
 ```text
-Markdown Source
-  -> Parser
+Markdown source
+  -> MarkdownParser
   -> MarkdownDocument
-  -> Plugins
-  -> Layout Model
-  -> Native Block Renderer
-  -> Selection / Copy / Accessibility / Dynamic Type
+  -> MarkdownConfiguration plugins
+  -> MMMDSwiftUI block views
+  -> SwiftUI ScrollView / List / LazyVStack
 ```
 
-For AI streaming:
+## 模块
 
-```text
-Token Delta
-  -> Streaming Buffer
-  -> Throttled Parse
-  -> Stable Blocks + Unstable Tail
-  -> Render Diff
-  -> Native UI Commit
-```
+- `MMMDCore`：纯模型、协议、主题、actions、国际化、复制 payload。
+- `MMMDParserSwiftMarkdown`：SPM 默认 parser，依赖 `swift-markdown`。
+- `MMMDParserCmark`：CocoaPods fallback parser。
+- `MMMDStreaming`：parser 无关的流式状态、稳定块、节流和 metrics。
+- `MMMDHighlighter`：代码高亮协议和默认实现。
+- `MMMDMath`：公式渲染协议和 fallback。
+- `MMMDHTML`：HTML sanitizer 和 fallback 策略。
+- `MMMDSwiftUI`：唯一公开渲染层。
+- `MMMDKit`：umbrella product。
 
-## 模块边界
+## Parser 策略
 
-### MMMDCore
+SPM 下默认使用 `SwiftMarkdownParser`。它负责：
 
-负责所有共享契约：
+- 使用 `swift-markdown` 解析 CommonMark/GFM。
+- 将 `Markdown.Document` 转成 `MarkdownDocument`。
+- 在 parse 前处理 display/inline math。
+- 在 streaming 阶段启用 incomplete Markdown speculative rewrite。
 
-- `MarkdownDocument`
-- `MarkdownBlock`
-- `InlineNode`
-- `MarkdownParser`
-- `MarkdownPlugin`
-- `MarkdownConfiguration`
-- `MarkdownTheme`
-- `RenderContext`
-- `AccessibilityNode`
-- `CopyPayload`
+CocoaPods 下默认使用 `MMMDParserCmark` fallback parser，避免 vendoring `swift-markdown` / `swift-cmark`。
 
-它不依赖 UIKit、AppKit、WebKit 或 JavaScript。
+## SwiftUI 渲染
 
-### MMMDParserCmark
+公开入口：
 
-负责 cmark-gfm 适配层。后续会绑定真实 cmark-gfm，并输出稳定的 MMMDKit 文档模型。公开 API 不暴露 cmark 内部类型。
+- `MarkdownText`
+- `MarkdownDocumentView`
+- `StreamingMarkdownText`
 
-### MMMDStreaming
+Block view 覆盖：
 
-负责 AI 流式处理。它接收文本 delta，输出渲染 diff，不感知具体 UI 容器。
+- paragraph / heading / list / blockquote / thematic break
+- code block / table / math / image / HTML fallback
 
-### MMMDHighlighter
+SwiftUI 渲染层通过 `MarkdownConfiguration` 读取 theme、localization、actions、highlighter、mathRenderer 和 imageLoader。
 
-负责代码高亮协议与实现，输出语义化高亮 token，不直接返回 UIKit/AppKit 视图。
+## Streaming
 
-### MMMDMath
+`StreamingMarkdownSession` 负责：
 
-负责 LaTeX 渲染协议和可缓存渲染结果。默认实现可以是 fallback，生产实现可以接入 KaTeX、MathJax、iosMath 或自定义引擎。
+- delta 输入累积。
+- 解析节流。
+- `stableBlockCount`。
+- `.streaming` / `.finished` phase。
+- `MarkdownStreamingMetrics`。
 
-### MMMDHTML
+`StreamingMarkdownText` 额外支持 snapshot 输入，并通过 `onUpdate` 把 diff 暴露给 demo 或业务监控面板。
 
-负责 HTML 能力判断和 fallback 结果。简单 HTML 可以映射到原生 inline，复杂 HTML 隔离到 WebView block。
+## 交互
 
-### MMMDUIKit
+默认行为：
 
-负责 iOS/iPadOS 原生渲染：
+- link：SwiftUI `openURL`。
+- copy：内部平台 pasteboard 适配。
+- image preview：SwiftUI sheet。
 
-- `MarkdownView`
-- block host collection view
-- block cells
-- link tap, copy, menu, accessibility, dynamic type
+业务可通过 `MarkdownActions` 覆盖 link、image、copy code、copy table、download、expand 等行为。
 
-### MMMDAppKit
+## 主题与国际化
 
-负责 macOS 原生渲染：
-
-- `MarkdownNSView`
-- `MarkdownCollectionViewHost`
-- AppKit render plan、block measurer 和 block view factory
-- AppKit 菜单、hover、无障碍、复制
-
-AppKit 层的布局入口是统一的 render plan。`MarkdownNSView` 负责非滚动内容渲染，适合嵌入聊天气泡、列表 item 或 SwiftUI；`MarkdownCollectionViewHost` 是长文档滚动容器。两者都复用同一套 block 测量结果，`MarkdownLayoutEngine.measure(...)` 也直接走这条链路，避免列表预排版高度和真实渲染高度分叉。
-
-## 自定义点
-
-每个核心子系统都应该可以替换：
-
-```swift
-let parser: MarkdownParser = MyParser()
-configuration.codeHighlighter = MyHighlighter()
-configuration.mathRenderer = MyMathRenderer()
-configuration.plugins = [MentionPlugin(), MermaidPlugin()]
-```
-
-Block renderer 按 block 类型注册：
-
-```swift
-var registry = BlockRendererRegistry()
-registry.register(kind: .code, rendererName: "MyCodeRenderer")
-configuration.blockRendererRegistry = registry
-```
-
-## 复杂内容策略
-
-### 代码块
-
-代码块是独立原生组件，包含语言标签、复制按钮、横向滚动、异步高亮和高度缓存。
-
-### 表格
-
-表格是独立可横向滚动 block。单元格支持 inline Markdown，列宽测量可缓存，未来支持大表格虚拟化。
-
-### LaTeX
-
-数学公式渲染是插件能力。inline math 可嵌入段落渲染，display math 使用独立 block。
-
-### HTML
-
-HTML 分层支持：
-
-```text
-安全 inline HTML -> 原生 inline
-已知 block HTML -> 原生 block
-复杂 HTML -> WKWebView fallback block
-```
-
-## 性能规则
-
-- Markdown 解析放到主线程外。
-- UI commit 只在主线程执行。
-- 流式输出需要节流。
-- 稳定 block 冻结，只更新不稳定尾块。
-- layout cache 需要包含宽度、动态字体、主题和平台 trait。
-- 代码高亮异步执行。
-- token streaming 阶段避免整篇文档 reload。
-
-## AppKit 布局策略
-
-macOS 不能直接照搬 UIKit 的 `systemLayoutSizeFitting` 思路。当前 AppKit 实现采用：
-
-```text
-MarkdownDocument
-  -> MarkdownRenderPlanBuilder
-  -> [MarkdownRenderItem]
-  -> AppKitMarkdownBlockMeasurer
-  -> AppKitMarkdownBlockViewFactory
-  -> MarkdownNSView / MarkdownCollectionViewHost
-```
-
-关键约束：
-
-- `MarkdownNSView` 是非滚动内容视图，使用 frame-driven 布局，并采用 flipped 坐标系从上到下摆放 block。
-- `MarkdownCollectionViewHost` 只负责长文档滚动，不能和外层聊天列表形成多层滚动。
-- `MarkdownLayoutEngine` 返回 Markdown 内容尺寸，不包含业务气泡、标题、头像等外层 UI。
-- 普通文本与代码块使用完整 TextKit 链路，确保 `NSTextView` 的 storage、layout manager 和 text container 自洽。
+- `MarkdownTheme.default` 使用 SwiftStreamingMarkdown 风格。
+- 旧视觉基线不再保留为内置 API；业务需要旧样式时应通过 `MarkdownTheme` 显式声明。
+- `MarkdownLocalization` 默认支持 English 和 Simplified Chinese，也支持业务传入自定义文案。

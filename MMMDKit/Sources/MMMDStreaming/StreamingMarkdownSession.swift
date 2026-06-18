@@ -14,6 +14,7 @@ public final class StreamingMarkdownSession {
     private var pendingDiff: MarkdownRenderDiff?
     private var isUpdateScheduled = false
     private var generation = 0
+    private var deliveredUpdateCount = 0
 
     /// 节流后的文档更新回调。
     ///
@@ -65,6 +66,7 @@ public final class StreamingMarkdownSession {
             self.generation += 1
             self.pendingDiff = nil
             self.isUpdateScheduled = false
+            self.deliveredUpdateCount = 0
             self.processor.reset()
         }
     }
@@ -90,8 +92,11 @@ public final class StreamingMarkdownSession {
     }
 
     private func deliverPendingDiff() {
-        guard let diff = pendingDiff else { return }
+        guard var diff = pendingDiff else { return }
         pendingDiff = nil
+        deliveredUpdateCount += 1
+        diff.metrics.renderCount = deliveredUpdateCount
+        diff.metrics.renderLatency = Date().timeIntervalSince(diff.metrics.createdAt)
         deliveryQueue.async { [weak self] in
             self?.onUpdate?(diff)
         }
